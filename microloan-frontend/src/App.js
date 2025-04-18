@@ -8,9 +8,14 @@ import News from "./pages/News";
 import Contact from "./pages/Contact";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import AdminDashboard from "./pages/AdminDashboard";
-import ClientDashboard from "./pages/ClientDashboard";
-import ApplyLoan from "./pages/ApplyLoan";
+import DashboardLayout from "./components/DashboardLayout";
+import Dashboard from "./pages/Dashboard";
+import UserManagement from "./pages/UserManagement";
+import LoanManagement from "./pages/LoanManagement";
+import BorrowerManagement from "./pages/BorrowerManagement";
+import MyLoans from "./pages/MyLoans";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -39,12 +44,31 @@ const AnimatedRoutes = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/client-dashboard" element={<ClientDashboard />} />
-          <Route path="/apply-loan" element={<ApplyLoan />} />
 
-          {/* Private Routes (Only for Admins) */}
-          <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
-            <Route path="/dashboard" element={<AdminDashboard />} />
+          {/* Protected Dashboard Routes */}
+          <Route element={<PrivateRoute />}>
+            <Route path="/dashboard" element={<DashboardLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
+              
+              {/* Admin Routes */}
+              <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
+                <Route path="users" element={<UserManagement />} />
+                <Route path="loans" element={<LoanManagement />} />
+              </Route>
+
+              {/* Loan Officer Routes */}
+              <Route element={<PrivateRoute allowedRoles={["loan_officer", "admin"]} />}>
+                <Route path="borrowers" element={<BorrowerManagement />} />
+                <Route path="loans" element={<LoanManagement />} />
+              </Route>
+
+              {/* Client Routes */}
+              <Route element={<PrivateRoute allowedRoles={["client"]} />}>
+                <Route path="my-loans" element={<MyLoans />} />
+              </Route>
+            </Route>
           </Route>
         </Routes>
       </motion.div>

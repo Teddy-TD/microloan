@@ -29,4 +29,26 @@ const loanOfficerMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = { authMiddleware, adminMiddleware, loanOfficerMiddleware };
+// Middleware to check if user can manage users
+const canManageUsersMiddleware = (req, res, next) => {
+  if (!req.user.permissions.canManageUsers) {
+    return res.status(403).json({ message: "Access denied. Insufficient permissions." });
+  }
+  next();
+};
+
+// Middleware to check if user can manage borrowers
+const canManageBorrowersMiddleware = (req, res, next) => {
+  if (!req.user.permissions.canManageBorrowers) {
+    return res.status(403).json({ message: "Access denied. Insufficient permissions." });
+  }
+  next();
+};
+
+module.exports = {
+  authMiddleware,
+  adminMiddleware,
+  loanOfficerMiddleware,
+  canManageUsersMiddleware,
+  canManageBorrowersMiddleware
+};
