@@ -1,6 +1,6 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import PrivateRoute from "./components/PrivateRoute";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Services from "./pages/Services";
@@ -23,8 +23,23 @@ const pageVariants = {
   exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
 };
 
+const PrivateRoute = ({ children, allowedRoles }) => {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" />;
+  }
+
+  return children;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   return (
     <AnimatePresence mode="wait">
@@ -47,8 +62,8 @@ const AnimatedRoutes = () => {
 
           {/* Protected Dashboard Routes */}
           <Route element={<PrivateRoute />}>
-            <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<Dashboard />} />
+            <Route path="/dashboard" element={<DashboardLayout user={user} onLogout={logout} />}>
+              <Route index element={<Dashboard user={user} />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
               
@@ -78,9 +93,11 @@ const AnimatedRoutes = () => {
 
 function App() {
   return (
-    <Router>
-      <AnimatedRoutes />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <AnimatedRoutes />
+      </Router>
+    </AuthProvider>
   );
 }
 

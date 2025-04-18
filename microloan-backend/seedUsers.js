@@ -1,13 +1,13 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('./models/User');
-require('dotenv').config();
 
 const defaultUsers = [
   {
     name: 'Admin User',
-    email: 'admin@microloan.com',
-    password: 'Admin@123', // Default password for admin
+    email: 'admin@example.com',
+    password: 'admin123',
     role: 'admin',
     permissions: {
       canManageUsers: true,
@@ -17,8 +17,8 @@ const defaultUsers = [
   },
   {
     name: 'Loan Officer',
-    email: 'officer@microloan.com',
-    password: 'Officer@123', // Default password for loan officer
+    email: 'officer@example.com',
+    password: 'officer123',
     role: 'loan_officer',
     permissions: {
       canManageUsers: false,
@@ -27,9 +27,9 @@ const defaultUsers = [
     }
   },
   {
-    name: 'Test Client',
-    email: 'client@microloan.com',
-    password: 'Client@123', // Default password for client
+    name: 'Client User',
+    email: 'client@example.com',
+    password: 'client123',
     role: 'client',
     permissions: {
       canManageUsers: false,
@@ -42,24 +42,27 @@ const defaultUsers = [
 const seedUsers = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log('Connected to MongoDB');
+    console.log('✅ Connected to MongoDB');
 
     // Clear existing users
     await User.deleteMany({});
-    console.log('Cleared existing users');
+    console.log('✅ Cleared existing users');
 
     // Hash passwords and create users
-    for (const user of defaultUsers) {
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(user.password, salt);
-      await User.create(user);
-      console.log(`Created ${user.role} user: ${user.email}`);
-    }
+    const hashedUsers = await Promise.all(
+      defaultUsers.map(async (user) => ({
+        ...user,
+        password: await bcrypt.hash(user.password, 10)
+      }))
+    );
 
-    console.log('Default users created successfully');
-    process.exit(0);
+    await User.insertMany(hashedUsers);
+    console.log('✅ Default users created successfully');
+
+    mongoose.disconnect();
+    console.log('✅ Disconnected from MongoDB');
   } catch (error) {
-    console.error('Error seeding users:', error);
+    console.error('❌ Error seeding users:', error);
     process.exit(1);
   }
 };
