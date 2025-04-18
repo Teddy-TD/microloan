@@ -12,6 +12,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import LoanOfficerDashboard from "./pages/LoanOfficerDashboard";
 import ApplyLoan from "./pages/ApplyLoan";
+import LoanRepaymentPage from "./pages/LoanRepaymentPage";
+import ComplaintsPage from "./pages/ComplaintsPage";
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -45,6 +47,8 @@ const AnimatedRoutes = () => {
           <Route element={<PrivateRoute allowedRoles={["client"]} />}>
             <Route path="/client-dashboard" element={<ClientDashboard />} />
             <Route path="/apply-loan" element={<ApplyLoan />} />
+            <Route path="/repayment" element={<LoanRepaymentPage />} />
+            <Route path="/complaints" element={<ComplaintsPage />} />
           </Route>
           
           {/* Loan Officer Routes */}

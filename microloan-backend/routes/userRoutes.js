@@ -6,6 +6,7 @@ const {
   removeUser, 
   resetPassword, 
   updateRole, 
+  toggleUserActive,
   updateUserProfile,
   updateOwnProfile
 } = require("../controllers/userController");
@@ -17,6 +18,7 @@ router.post("/", authMiddleware, adminMiddleware, addUser);
 router.delete("/:userId", authMiddleware, adminMiddleware, removeUser);
 router.put("/:userId/reset-password", authMiddleware, adminMiddleware, resetPassword);
 router.put("/:userId/role", authMiddleware, adminMiddleware, updateRole);
+router.put("/:userId/active", authMiddleware, adminMiddleware, toggleUserActive);
 
 // Loan officer routes
 router.put("/:userId/profile", authMiddleware, loanOfficerMiddleware, updateUserProfile);

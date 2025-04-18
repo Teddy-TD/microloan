@@ -6,8 +6,9 @@ const connectDB = require("./config/db");
 // Import Routes
 const authRoutes = require("./routes/authRoutes");
 const loanRoutes = require("./routes/loanRoutes");
-const repaymentRoutes = require("./routes/repaymentRoutes");
+const transactionRoutes = require("./routes/transactionRoutes");
 const userRoutes = require("./routes/userRoutes");
+const complaintRoutes = require("./routes/complaintRoutes");
 
 const app = express();
 
@@ -23,10 +24,13 @@ app.get("/", (req, res) => {
   res.send("✅ Microloan Management API is running...");
 });
 
+app.use('/uploads', express.static('uploads'));
+
 app.use("/api/auth", authRoutes);
 app.use("/api/loans", loanRoutes);
-app.use("/api/repayments", repaymentRoutes);
+app.use("/api/transactions", transactionRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/complaints", complaintRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "❌ Route not found" });

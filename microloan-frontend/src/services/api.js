@@ -42,8 +42,13 @@ export const loginUser = async (email, password) => {
 
 export const getClientLoans = async () => {
   try {
-    const token = localStorage.getItem("token");
-    const res = await fetch("http://localhost:5000/api/loans", {
+    const token = localStorage.getItem("authToken");
+    
+    if (!token) {
+      throw new Error("No token found. Please log in.");
+    }
+    
+    const response = await fetch(`${BASE_URL}/api/loans/my-loans`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -51,16 +56,75 @@ export const getClientLoans = async () => {
       },
     });
 
-    const data = await res.json();
-    console.log("API Response:", data);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch loans");
+    }
 
+    const data = await response.json();
     return Array.isArray(data) ? data : []; 
   } catch (error) {
     console.error("Error fetching client loans:", error);
     throw error;
   }
-
 };
+
+export const applyForLoan = async (formData) => {
+  const token = localStorage.getItem("authToken");  
+
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/loans/apply`, {  
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData, // FormData for file uploads
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Loan application failed");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Loan Application Error:", error);
+    throw error;
+  }
+};
+
+export const getLoanById = async (loanId) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/loans/${loanId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch loan details");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching loan details:", error);
+    throw error;
+  }
+};
+
 export const applyLoan = async (amount, duration) => {
   const token = localStorage.getItem("authToken");  
 
@@ -234,6 +298,35 @@ export const updateUserRole = async (userId, role) => {
   }
 };
 
+export const toggleUserActive = async (userId, active) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/${userId}/active`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ active }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update account status");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating account status:", error);
+    throw error;
+  }
+};
+
 // Loan Officer API Functions
 export const getAllLoans = async () => {
   const token = localStorage.getItem("authToken");
@@ -382,5 +475,233 @@ export const getSystemStats = async () => {
       totalAmount: 0,
       pendingLoans: 0
     };
+  }
+};
+
+export const processRepayment = async (loanId, amount, reference = "") => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/transactions/repayment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ loanId, amount, reference }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to process payment");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error processing payment:", error);
+    throw error;
+  }
+};
+
+export const getUserTransactions = async () => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/transactions`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch transactions");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    throw error;
+  }
+};
+
+export const getLoanTransactions = async (loanId) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/transactions/loan/${loanId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch loan transactions");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching loan transactions:", error);
+    throw error;
+  }
+};
+
+// Complaint API Functions
+export const submitComplaint = async (description) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ description }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to submit complaint");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error submitting complaint:", error);
+    throw error;
+  }
+};
+
+export const getClientComplaints = async () => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/my-complaints`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch complaints");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    throw error;
+  }
+};
+
+export const getComplaintById = async (complaintId) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/${complaintId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch complaint details");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching complaint details:", error);
+    throw error;
+  }
+};
+
+export const getAllComplaints = async () => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/all`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch all complaints");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching all complaints:", error);
+    throw error;
+  }
+};
+
+export const updateComplaintStatus = async (complaintId, status, responseText = "") => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/${complaintId}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status, response: responseText }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update complaint status");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating complaint status:", error);
+    throw error;
   }
 };

@@ -32,7 +32,7 @@ const addUser = async (req, res) => {
 
     res.status(201).json({ 
       message: "User added successfully",
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, active: user.active }
     });
   } catch (error) {
     console.error("❌ Add User Error:", error); 
@@ -101,10 +101,44 @@ const updateRole = async (req, res) => {
 
     res.json({ 
       message: "User role updated successfully",
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, active: user.active }
     });
   } catch (error) {
     console.error("❌ Update Role Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Toggle user active status (activate/deactivate) - Admin only
+const toggleUserActive = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { active } = req.body;
+    
+    if (typeof active !== 'boolean') {
+      return res.status(400).json({ message: "Active status must be a boolean" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Prevent deactivating your own admin account
+    if (req.user.id === userId && req.user.role === 'admin' && active === false) {
+      return res.status(400).json({ message: "Cannot deactivate your own admin account" });
+    }
+
+    user.active = active;
+    await user.save();
+
+    const statusMessage = active ? "activated" : "deactivated";
+    res.json({ 
+      message: `User account ${statusMessage} successfully`,
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, active: user.active }
+    });
+  } catch (error) {
+    console.error("❌ Toggle User Active Error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -139,7 +173,7 @@ const updateUserProfile = async (req, res) => {
 
     res.json({ 
       message: "User profile updated successfully",
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, active: user.active }
     });
   } catch (error) {
     console.error("❌ Update Profile Error:", error);
@@ -184,7 +218,7 @@ const updateOwnProfile = async (req, res) => {
 
     res.json({ 
       message: "Profile updated successfully",
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, active: user.active }
     });
   } catch (error) {
     console.error("❌ Update Own Profile Error:", error);
@@ -198,6 +232,7 @@ module.exports = {
   removeUser, 
   resetPassword, 
   updateRole, 
+  toggleUserActive,
   updateUserProfile,
   updateOwnProfile
 };
