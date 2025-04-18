@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const loanRoutes = require("./routes/loanRoutes");
 const repaymentRoutes = require("./routes/repaymentRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/loans", loanRoutes);
 app.use("/api/repayments", repaymentRoutes);
+app.use("/api/users", userRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "❌ Route not found" });

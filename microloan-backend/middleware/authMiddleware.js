@@ -1,30 +1,15 @@
 const jwt = require("jsonwebtoken");
-const User = require('../models/User');
 
-const authMiddleware = async (req, res, next) => {
+const authMiddleware = (req, res, next) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+  if (!token) return res.status(401).json({ message: "Access denied" });
+
   try {
-    // Get token from header
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ message: 'No token, authorization denied' });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Get user from database
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    req.user = user;
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified;
     next();
   } catch (error) {
-    console.error('Auth Middleware Error:', error);
-    res.status(401).json({ message: 'Token is not valid' });
+    res.status(401).json({ message: "Invalid token" });
   }
 };
 
@@ -44,26 +29,4 @@ const loanOfficerMiddleware = (req, res, next) => {
   next();
 };
 
-// Middleware to check if user can manage users
-const canManageUsersMiddleware = (req, res, next) => {
-  if (!req.user.permissions.canManageUsers) {
-    return res.status(403).json({ message: "Access denied. Insufficient permissions." });
-  }
-  next();
-};
-
-// Middleware to check if user can manage borrowers
-const canManageBorrowersMiddleware = (req, res, next) => {
-  if (!req.user.permissions.canManageBorrowers) {
-    return res.status(403).json({ message: "Access denied. Insufficient permissions." });
-  }
-  next();
-};
-
-module.exports = {
-  authMiddleware,
-  adminMiddleware,
-  loanOfficerMiddleware,
-  canManageUsersMiddleware,
-  canManageBorrowersMiddleware
-};
+module.exports = { authMiddleware, adminMiddleware, loanOfficerMiddleware };

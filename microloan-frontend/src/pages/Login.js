@@ -1,85 +1,108 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, message } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useState } from "react";
+import { Box, Container, Typography, TextField, Button, Alert, Paper } from "@mui/material";
+import { loginUser } from "../services/api";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const onFinish = async (values) => {
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      const success = await login(values.email, values.password);
-      if (success) {
-        message.success('Login successful!');
-        navigate('/dashboard');
+      const data = await loginUser(formData.email, formData.password);
+      console.log("Login successful:", data);
+      
+      // Redirect based on user role
+      if (data.user.role === "admin") {
+        navigate("/admin-dashboard");
+      } else if (data.user.role === "loan_officer") {
+        navigate("/loan-officer-dashboard");
       } else {
-        message.error('Invalid credentials');
+        navigate("/client-dashboard");
       }
     } catch (error) {
-      message.error('An error occurred during login');
+      console.error("Login error:", error);
+      setError(error.message || "Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh',
-      background: '#f0f2f5'
-    }}>
-      <Card 
-        title="Login to Microloan System" 
-        style={{ width: 400 }}
-        headStyle={{ textAlign: 'center' }}
-      >
-        <Form
-          name="login"
-          onFinish={onFinish}
-          layout="vertical"
-        >
-          <Form.Item
-            name="email"
-            rules={[
-              { required: true, message: 'Please input your email!' },
-              { type: 'email', message: 'Please input a valid email!' }
-            ]}
-          >
-            <Input 
-              prefix={<UserOutlined />} 
-              placeholder="Email" 
-            />
-          </Form.Item>
+    <Box sx={{ py: 10, backgroundColor: "#F5F7FA", minHeight: "100vh" }}>
+      <Container maxWidth="sm">
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+          <Typography variant="h4" fontWeight="bold" color="#1E3A8A" sx={{ mb: 3, textAlign: "center" }}>
+            Login
+          </Typography>
 
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
-          >
-            <Input.Password
-              prefix={<LockOutlined />}
-              placeholder="Password"
-            />
-          </Form.Item>
+          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-          <Form.Item>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              loading={loading}
-              style={{ width: '100%' }}
+          <form onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              sx={{ mb: 3 }}
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              sx={{ mb: 3 }}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              sx={{
+                backgroundColor: "#3B82F6",
+                "&:hover": { backgroundColor: "#1E3A8A" },
+                py: 1.5,
+              }}
             >
-              Log in
+              {loading ? "Logging in..." : "Login"}
             </Button>
-          </Form.Item>
-        </Form>
-      </Card>
-    </div>
+          </form>
+
+          <Box sx={{ mt: 3, textAlign: "center" }}>
+            <Typography variant="body2">
+              Don't have an account?{" "}
+              <Button
+                variant="text"
+                color="primary"
+                onClick={() => navigate("/register")}
+              >
+                Register
+              </Button>
+            </Typography>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
