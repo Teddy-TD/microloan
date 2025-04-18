@@ -14,6 +14,9 @@ import LoanOfficerDashboard from "./pages/LoanOfficerDashboard";
 import ApplyLoan from "./pages/ApplyLoan";
 import LoanRepaymentPage from "./pages/LoanRepaymentPage";
 import ComplaintsPage from "./pages/ComplaintsPage";
+import BalancePage from "./pages/BalancePage";
+import LoanOfficerApplications from "./pages/LoanOfficerApplications";
+import LoanApplicationDetailPage from "./pages/LoanApplicationDetailPage";
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -49,11 +52,14 @@ const AnimatedRoutes = () => {
             <Route path="/apply-loan" element={<ApplyLoan />} />
             <Route path="/repayment" element={<LoanRepaymentPage />} />
             <Route path="/complaints" element={<ComplaintsPage />} />
+            <Route path="/balance" element={<BalancePage />} />
           </Route>
           
           {/* Loan Officer Routes */}
           <Route element={<PrivateRoute allowedRoles={["loan_officer", "admin"]} />}>
             <Route path="/loan-officer-dashboard" element={<LoanOfficerDashboard />} />
+            <Route path="/loan-officer/applications" element={<LoanOfficerApplications />} />
+            <Route path="/loan-officer/applications/:applicationId" element={<LoanApplicationDetailPage />} />
           </Route>
 
           {/* Admin Routes */}

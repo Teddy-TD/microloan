@@ -14,7 +14,19 @@ const LoanSchema = new mongoose.Schema({
   totalPaid: { type: Number, default: 0 }, // Total amount paid so far
   lastPaymentDate: { type: Date }, // Date of the last payment
   nextPaymentDue: { type: Date }, // Date when the next payment is due
-  isFullyPaid: { type: Boolean, default: false } // Whether the loan has been fully paid
+  isFullyPaid: { type: Boolean, default: false }, // Whether the loan has been fully paid
+  
+  // Additional fields for Loan Officer
+  reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Loan officer who reviewed the application
+  reviewNotes: { type: String }, // Notes from the loan officer
+  reviewedAt: { type: Date }, // When the application was reviewed
+  
+  // Repayment schedule
+  repaymentSchedule: [{ 
+    dueDate: { type: Date },
+    amount: { type: Number },
+    status: { type: String, enum: ["pending", "paid"], default: "pending" }
+  }]
 }, { timestamps: true });
 
 // Update the updatedAt field on save

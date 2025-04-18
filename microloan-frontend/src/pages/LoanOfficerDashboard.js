@@ -18,11 +18,23 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Card,
+  CardContent,
+  Grid,
+  Chip
 } from "@mui/material";
+import { 
+  Dashboard as DashboardIcon,
+  List as ListIcon,
+  Person as PersonIcon,
+  Assessment as AssessmentIcon
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { getAllLoans, updateLoanStatus, getClientsList, updateClientProfile } from "../services/api";
 
 const LoanOfficerDashboard = () => {
+  const navigate = useNavigate();
   const [loans, setLoans] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +45,12 @@ const LoanOfficerDashboard = () => {
   const [clientFormData, setClientFormData] = useState({
     name: "",
     email: ""
+  });
+  const [stats, setStats] = useState({
+    pendingLoans: 0,
+    approvedLoans: 0,
+    rejectedLoans: 0,
+    totalClients: 0
   });
 
   useEffect(() => {
@@ -49,7 +67,21 @@ const LoanOfficerDashboard = () => {
       ]);
       
       setLoans(loansData);
-      setClients(clientsData.filter(client => client.role === "client"));
+      const clientsList = clientsData.filter(client => client.role === "client");
+      setClients(clientsList);
+      
+      // Calculate statistics
+      const pendingCount = loansData.filter(loan => loan.status === "pending").length;
+      const approvedCount = loansData.filter(loan => loan.status === "approved").length;
+      const rejectedCount = loansData.filter(loan => loan.status === "rejected").length;
+      
+      setStats({
+        pendingLoans: pendingCount,
+        approvedLoans: approvedCount,
+        rejectedLoans: rejectedCount,
+        totalClients: clientsList.length
+      });
+      
       setError(null);
     } catch (err) {
       console.error("Error fetching data:", err);
@@ -135,10 +167,73 @@ const LoanOfficerDashboard = () => {
                 </Tabs>
               </Box>
 
+              {/* Quick Navigation Cards */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        Pending Loans
+                      </Typography>
+                      <Typography variant="h4" sx={{ mb: 1, fontWeight: "bold" }}>
+                        {stats.pendingLoans}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        Approved Loans
+                      </Typography>
+                      <Typography variant="h4" sx={{ mb: 1, fontWeight: "bold" }}>
+                        {stats.approvedLoans}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        Rejected Loans
+                      </Typography>
+                      <Typography variant="h4" sx={{ mb: 1, fontWeight: "bold" }}>
+                        {stats.rejectedLoans}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 1 }}>
+                        Total Clients
+                      </Typography>
+                      <Typography variant="h4" sx={{ mb: 1, fontWeight: "bold" }}>
+                        {stats.totalClients}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
               {/* Loan Applications Tab */}
               {tabValue === 0 && (
                 <Box>
-                  <Typography variant="h6" sx={{ mb: 2 }}>Manage Loan Applications</Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">Manage Loan Applications</Typography>
+                    <Button 
+                      variant="contained" 
+                      color="primary"
+                      startIcon={<ListIcon />}
+                      onClick={() => navigate('/loan-officer/applications')}
+                    >
+                      Advanced Application Management
+                    </Button>
+                  </Box>
+                  
                   {loans.length === 0 ? (
                     <Typography>No loan applications found.</Typography>
                   ) : (

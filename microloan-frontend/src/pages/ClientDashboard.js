@@ -108,6 +108,14 @@ const ClientDashboard = () => {
                 </Button>
                 
                 <Button 
+                  variant="contained"
+                  color="info"
+                  onClick={() => navigate("/balance")}
+                >
+                  View Balances
+                </Button>
+                
+                <Button 
                   variant="outlined" 
                   onClick={() => setTabValue(2)}
                 >
