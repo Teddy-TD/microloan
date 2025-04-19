@@ -930,3 +930,187 @@ export const processApplication = async (applicationId, data) => {
     throw error;
   }
 };
+
+// User Profile Management API Functions
+export const getUserProfile = async () => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/profile`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch user profile");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    throw error;
+  }
+};
+
+export const updateUserProfile = async (profileData) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update user profile");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    throw error;
+  }
+};
+
+export const updatePassword = async (currentPassword, newPassword) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/password`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update password");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating password:", error);
+    throw error;
+  }
+};
+
+// Loan Officer Client Management API Functions
+export const getAllClients = async (params = {}) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.order) queryParams.append('order', params.order);
+    if (params.search) queryParams.append('search', params.search);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    
+    const response = await fetch(`${BASE_URL}/api/users/clients${queryString}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch clients");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching clients:", error);
+    throw error;
+  }
+};
+
+export const getClientById = async (clientId) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/clients/${clientId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch client details");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching client details:", error);
+    throw error;
+  }
+};
+
+export const updateClient = async (clientId, profileData) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/users/clients/${clientId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update client");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating client:", error);
+    throw error;
+  }
+};

@@ -8,7 +8,12 @@ const {
   updateRole, 
   toggleUserActive,
   updateUserProfile,
-  updateOwnProfile
+  updateOwnProfile,
+  getUserProfile,
+  updatePassword,
+  getAllClients,
+  getClientById,
+  updateClientProfile
 } = require("../controllers/userController");
 const { authMiddleware, adminMiddleware, loanOfficerMiddleware } = require("../middleware/authMiddleware");
 
@@ -22,8 +27,13 @@ router.put("/:userId/active", authMiddleware, adminMiddleware, toggleUserActive)
 
 // Loan officer routes
 router.put("/:userId/profile", authMiddleware, loanOfficerMiddleware, updateUserProfile);
+router.get("/clients", authMiddleware, loanOfficerMiddleware, getAllClients);
+router.get("/clients/:clientId", authMiddleware, loanOfficerMiddleware, getClientById);
+router.patch("/clients/:clientId", authMiddleware, loanOfficerMiddleware, updateClientProfile);
 
 // All authenticated users
+router.get("/profile", authMiddleware, getUserProfile);
 router.put("/profile", authMiddleware, updateOwnProfile);
+router.put("/password", authMiddleware, updatePassword);
 
 module.exports = router;

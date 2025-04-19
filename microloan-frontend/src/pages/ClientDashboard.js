@@ -116,6 +116,14 @@ const ClientDashboard = () => {
                 </Button>
                 
                 <Button 
+                  variant="contained"
+                  color="primary"
+                  onClick={() => navigate("/profile")}
+                >
+                  My Profile
+                </Button>
+                
+                <Button 
                   variant="outlined" 
                   onClick={() => setTabValue(2)}
                 >

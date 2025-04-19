@@ -28,7 +28,8 @@ import {
   Dashboard as DashboardIcon,
   List as ListIcon,
   Person as PersonIcon,
-  Assessment as AssessmentIcon
+  Assessment as AssessmentIcon,
+  People as PeopleIcon
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { getAllLoans, updateLoanStatus, getClientsList, updateClientProfile } from "../services/api";
@@ -149,6 +150,17 @@ const LoanOfficerDashboard = () => {
   return (
     <Box sx={{ py: 5, backgroundColor: "#F5F7FA", minHeight: "100vh" }}>
       <Container maxWidth="lg">
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<PersonIcon />}
+            onClick={() => navigate('/loan-officer/profile')}
+          >
+            My Profile
+          </Button>
+        </Box>
+        
         <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
           <Typography variant="h4" fontWeight="bold" color="#1E3A8A" sx={{ mb: 3 }}>
             Loan Officer Dashboard
@@ -289,6 +301,22 @@ const LoanOfficerDashboard = () => {
               {tabValue === 1 && (
                 <Box>
                   <Typography variant="h6" sx={{ mb: 2 }}>Manage Client Profiles</Typography>
+                  
+                  <Box sx={{ mb: 3 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<PeopleIcon />}
+                      onClick={() => navigate('/loan-officer/clients')}
+                      sx={{ mr: 2 }}
+                    >
+                      View All Clients
+                    </Button>
+                    <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                      Use the new client management system for advanced filtering, sorting, and detailed profile reviews.
+                    </Typography>
+                  </Box>
+                  
                   {clients.length === 0 ? (
                     <Typography>No clients found.</Typography>
                   ) : (

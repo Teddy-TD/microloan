@@ -17,6 +17,10 @@ import ComplaintsPage from "./pages/ComplaintsPage";
 import BalancePage from "./pages/BalancePage";
 import LoanOfficerApplications from "./pages/LoanOfficerApplications";
 import LoanApplicationDetailPage from "./pages/LoanApplicationDetailPage";
+import ProfilePage from "./pages/ProfilePage";
+import ClientsListPage from "./pages/ClientsListPage";
+import ClientProfilePage from "./pages/ClientProfilePage";
+import LoanOfficerProfilePage from "./pages/LoanOfficerProfilePage";
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -53,6 +57,7 @@ const AnimatedRoutes = () => {
             <Route path="/repayment" element={<LoanRepaymentPage />} />
             <Route path="/complaints" element={<ComplaintsPage />} />
             <Route path="/balance" element={<BalancePage />} />
+            <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           </Route>
           
           {/* Loan Officer Routes */}
@@ -60,6 +65,11 @@ const AnimatedRoutes = () => {
             <Route path="/loan-officer-dashboard" element={<LoanOfficerDashboard />} />
             <Route path="/loan-officer/applications" element={<LoanOfficerApplications />} />
             <Route path="/loan-officer/applications/:applicationId" element={<LoanApplicationDetailPage />} />
+            <Route path="/loan-officer/clients" element={<PrivateRoute allowedRoles={["loan_officer"]}><ClientsListPage /></PrivateRoute>} />
+            <Route path="/loan-officer/clients/:clientId" element={<PrivateRoute allowedRoles={["loan_officer"]}><ClientProfilePage /></PrivateRoute>} />
+          </Route>
+          <Route element={<PrivateRoute allowedRoles={["loan_officer"]} />}>
+            <Route path="/loan-officer/profile" element={<LoanOfficerProfilePage />} />
           </Route>
 
           {/* Admin Routes */}
