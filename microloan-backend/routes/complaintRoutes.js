@@ -4,7 +4,9 @@ const {
   getClientComplaints, 
   getComplaintById, 
   getAllComplaints, 
-  updateComplaintStatus 
+  updateComplaintStatus,
+  assignComplaint,
+  resolveComplaint
 } = require("../controllers/complaintController");
 const { 
   authMiddleware, 
@@ -25,10 +27,17 @@ router.get("/my-complaints", authMiddleware, getClientComplaints);
 router.get("/:complaintId", authMiddleware, getComplaintById);
 
 // Admin and Loan Officer routes
-// Get all complaints
-router.get("/all", authMiddleware, loanOfficerMiddleware, getAllComplaints);
+// Get all complaints with pagination and filters
+router.get("/", authMiddleware, loanOfficerMiddleware, getAllComplaints);
 
 // Update complaint status
-router.put("/:complaintId/status", authMiddleware, loanOfficerMiddleware, updateComplaintStatus);
+router.patch("/:complaintId", authMiddleware, loanOfficerMiddleware, updateComplaintStatus);
+
+// Admin-only routes
+// Assign complaint to loan officer
+router.patch("/:complaintId/assign", authMiddleware, adminMiddleware, assignComplaint);
+
+// Resolve complaint
+router.patch("/:complaintId/resolve", authMiddleware, adminMiddleware, resolveComplaint);
 
 module.exports = router;

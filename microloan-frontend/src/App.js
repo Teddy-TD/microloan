@@ -23,6 +23,8 @@ import ClientProfilePage from "./pages/ClientProfilePage";
 import LoanOfficerProfilePage from "./pages/LoanOfficerProfilePage";
 import AdminApplications from "./pages/AdminApplications";
 import AdminApplicationDetailPage from "./pages/AdminApplicationDetailPage";
+import AdminComplaints from './pages/AdminComplaints';
+import AdminComplaintDetailPage from './pages/AdminComplaintDetailPage';
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -77,6 +79,8 @@ const AnimatedRoutes = () => {
           {/* Admin Routes */}
           <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/complaints" element={<AdminComplaints />} />
+            <Route path="/admin/complaints/:complaintId" element={<AdminComplaintDetailPage />} />
             <Route path="/admin/applications" element={<AdminApplications />} />
             <Route path="/admin/applications/:applicationId" element={<AdminApplicationDetailPage />} />
           </Route>

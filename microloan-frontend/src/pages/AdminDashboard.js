@@ -44,7 +44,8 @@ import {
   getSystemStats,
   updateClientProfile,
   getAdminAllApplications,
-  getAdminPendingApplications
+  getAdminPendingApplications,
+  getAdminComplaints
 } from "../services/api";
 import { 
   PersonAdd, 
@@ -62,7 +63,8 @@ import {
   Pending, 
   Visibility, 
   ArrowUpward, 
-  ArrowDownward
+  ArrowDownward,
+  Comment as CommentIcon
 } from '@mui/icons-material';
 import { useNavigate } from "react-router-dom";
 
@@ -72,11 +74,13 @@ const AdminDashboard = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loans, setLoans] = useState([]);
   const [applications, setApplications] = useState([]);
+  const [complaints, setComplaints] = useState([]);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalLoans: 0,
     totalAmount: 0,
-    pendingLoans: 0
+    pendingLoans: 0,
+    pendingComplaints: 0
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -98,6 +102,24 @@ const AdminDashboard = () => {
   });
   const [appSortBy, setAppSortBy] = useState('applicationDate');
   const [appSortOrder, setAppSortOrder] = useState('desc');
+  
+  // Complaint Management Tab States
+  const [complaintTabValue, setComplaintTabValue] = useState(0);
+  const [complaintSearchTerm, setComplaintSearchTerm] = useState("");
+  const [complaintLoading, setComplaintLoading] = useState(false);
+  const [complaintError, setComplaintError] = useState(null);
+  const [complaintPagination, setComplaintPagination] = useState({
+    currentPage: 1,
+    limit: 10,
+    totalCount: 0,
+    totalPages: 0
+  });
+  const [complaintSortBy, setComplaintSortBy] = useState('submittedAt');
+  const [complaintSortOrder, setComplaintSortOrder] = useState('desc');
+  const [complaintFilters, setComplaintFilters] = useState({
+    status: '',
+    search: ''
+  });
   
   // Pagination
   const [page, setPage] = useState(0);
@@ -166,6 +188,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (tabValue === 2) {
       fetchApplicationsByTab(appTabValue);
+    } else if (tabValue === 3) {
+      fetchComplaintsByTab(complaintTabValue);
     }
   }, [tabValue]);
 
@@ -193,65 +217,89 @@ const AdminDashboard = () => {
   };
 
   const fetchApplicationsByTab = async (tabIndex) => {
-    setAppLoading(true);
     try {
-      let response;
-      
-      if (tabIndex === 0) {
-        // All applications
-        response = await getAdminAllApplications({
-          page: 1,
-          limit: appPagination.limit,
-          sortBy: appSortBy,
-          order: appSortOrder,
-          search: appSearchTerm
-        });
-      } else if (tabIndex === 1) {
-        // Pending applications
-        response = await getAdminPendingApplications({
-          page: 1,
-          limit: appPagination.limit,
-          sortBy: appSortBy,
-          order: appSortOrder,
-          search: appSearchTerm
-        });
-      } else if (tabIndex === 2) {
-        // Approved applications
-        response = await getAdminAllApplications({
-          page: 1,
-          limit: appPagination.limit,
-          sortBy: appSortBy,
-          order: appSortOrder,
-          status: 'approved',
-          search: appSearchTerm
-        });
-      } else if (tabIndex === 3) {
-        // Rejected applications
-        response = await getAdminAllApplications({
-          page: 1,
-          limit: appPagination.limit,
-          sortBy: appSortBy,
-          order: appSortOrder,
-          status: 'rejected',
-          search: appSearchTerm
-        });
-      }
-      
-      if (response) {
-        setApplications(response.applications || []);
-        setAppPagination({
-          currentPage: response.pagination?.currentPage || 1,
-          limit: response.pagination?.limit || 10,
-          totalCount: response.pagination?.totalCount || 0,
-          totalPages: response.pagination?.totalPages || 0
-        });
-      }
+      setAppLoading(true);
       setAppError(null);
+      let response;
+
+      if (tabIndex === 0) { // All Applications
+        response = await getAdminAllApplications({
+          page: appPagination.currentPage,
+          limit: appPagination.limit,
+          sortBy: appSortBy,
+          order: appSortOrder,
+          search: appSearchTerm
+        });
+      } else if (tabIndex === 1) { // Pending Applications
+        response = await getAdminPendingApplications({
+          page: appPagination.currentPage,
+          limit: appPagination.limit,
+          sortBy: appSortBy,
+          order: appSortOrder,
+          search: appSearchTerm
+        });
+      }
+
+      if (response) {
+        setApplications(response.applications);
+        setAppPagination({
+          currentPage: response.pagination.currentPage,
+          limit: response.pagination.limit,
+          totalCount: response.pagination.totalCount,
+          totalPages: response.pagination.totalPages
+        });
+      }
     } catch (err) {
       console.error("Error fetching applications:", err);
-      setAppError("Failed to fetch applications. Please try again later.");
+      setAppError(err.message || "Failed to load applications");
     } finally {
       setAppLoading(false);
+    }
+  };
+
+  const fetchComplaintsByTab = async (tabIndex) => {
+    try {
+      setComplaintLoading(true);
+      setComplaintError(null);
+      
+      let statusFilter = '';
+      switch(tabIndex) {
+        case 1: // Open
+          statusFilter = 'open';
+          break;
+        case 2: // Assigned
+          statusFilter = 'assigned';
+          break;
+        case 3: // Resolved
+          statusFilter = 'resolved';
+          break;
+        default: // All Complaints
+          statusFilter = '';
+      }
+      
+      const response = await getAdminComplaints({
+        page: complaintPagination.currentPage,
+        limit: complaintPagination.limit,
+        sortBy: complaintSortBy,
+        order: complaintSortOrder,
+        status: statusFilter,
+        search: complaintSearchTerm
+      });
+      
+      if (response) {
+        setComplaints(response.complaints);
+        setComplaintPagination({
+          currentPage: response.pagination.currentPage,
+          limit: response.pagination.limit,
+          totalCount: response.pagination.totalCount,
+          totalPages: response.pagination.totalPages
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching complaints:", err);
+      setComplaintError(err.message || "Failed to load complaints");
+    } finally {
+      setComplaintLoading(false);
     }
   };
 
@@ -263,6 +311,62 @@ const AdminDashboard = () => {
   const handleAppTabChange = (event, newValue) => {
     setAppTabValue(newValue);
     fetchApplicationsByTab(newValue);
+  };
+  
+  const handleComplaintTabChange = (event, newValue) => {
+    setComplaintTabValue(newValue);
+    setComplaintPagination({
+      ...complaintPagination,
+      currentPage: 1 // Reset to first page when changing tabs
+    });
+    fetchComplaintsByTab(newValue);
+  };
+  
+  const handleComplaintSearchChange = (e) => {
+    setComplaintSearchTerm(e.target.value);
+  };
+  
+  const handleComplaintSearch = () => {
+    setComplaintPagination({
+      ...complaintPagination,
+      currentPage: 1 // Reset to first page when searching
+    });
+    fetchComplaintsByTab(complaintTabValue);
+  };
+  
+  const handleComplaintSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleComplaintSearch();
+    }
+  };
+  
+  const handleComplaintPageChange = (event, newPage) => {
+    setComplaintPagination({
+      ...complaintPagination,
+      currentPage: newPage + 1
+    });
+    fetchComplaintsByTab(complaintTabValue);
+  };
+  
+  const handleComplaintLimitChange = (event) => {
+    const newLimit = parseInt(event.target.value, 10);
+    setComplaintPagination({
+      ...complaintPagination,
+      limit: newLimit,
+      currentPage: 1 // Reset to first page when changing limit
+    });
+    fetchComplaintsByTab(complaintTabValue);
+  };
+  
+  const handleComplaintSortChange = (column) => {
+    const newOrder = complaintSortBy === column && complaintSortOrder === 'asc' ? 'desc' : 'asc';
+    setComplaintSortBy(column);
+    setComplaintSortOrder(newOrder);
+    fetchComplaintsByTab(complaintTabValue);
+  };
+  
+  const handleComplaintRefresh = () => {
+    fetchComplaintsByTab(complaintTabValue);
   };
   
   const handleAppPageChange = (event, newPage) => {
@@ -738,6 +842,7 @@ const AdminDashboard = () => {
                   <Tab label="User Management" />
                   <Tab label="Loan Overview" />
                   <Tab label="Loan Applications" />
+                  <Tab label="Complaint Management" />
                 </Tabs>
               </Box>
 
@@ -1175,6 +1280,245 @@ const AdminDashboard = () => {
                       />
                     </>
                   )}
+                </Box>
+              )}
+              
+              {/* Complaint Management Tab */}
+              {tabValue === 3 && (
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center' }}>
+                    <Typography variant="h6">Complaint Management</Typography>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Refresh />}
+                      onClick={handleComplaintRefresh}
+                      disabled={complaintLoading}
+                    >
+                      Refresh
+                    </Button>
+                  </Box>
+                  
+                  {complaintError && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {complaintError}
+                    </Alert>
+                  )}
+                  
+                  {/* Tabs */}
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                    <Tabs 
+                      value={complaintTabValue} 
+                      onChange={handleComplaintTabChange}
+                      indicatorColor="primary"
+                      textColor="primary"
+                      variant="fullWidth"
+                    >
+                      <Tab 
+                        icon={<Dashboard />} 
+                        label="All Complaints" 
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon={<Pending />} 
+                        label="Open" 
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon={<AdminPanelSettings />} 
+                        label="Assigned" 
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon={<CheckCircle />} 
+                        label="Resolved" 
+                        iconPosition="start"
+                      />
+                    </Tabs>
+                  </Box>
+                  
+                  {/* Search Bar */}
+                  <Box sx={{ mb: 3 }}>
+                    <TextField
+                      fullWidth
+                      placeholder="Search by client name or description"
+                      variant="outlined"
+                      size="small"
+                      value={complaintSearchTerm}
+                      onChange={handleComplaintSearchChange}
+                      onKeyPress={handleComplaintSearchKeyPress}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search />
+                          </InputAdornment>
+                        ),
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={handleComplaintSearch} edge="end">
+                              <FilterList />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Box>
+                  
+                  {/* Complaints Table */}
+                  {complaintLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <>
+                      <TableContainer component={Paper} elevation={2}>
+                        <Table>
+                          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                            <TableRow>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleComplaintSortChange('_id')}
+                                >
+                                  Complaint ID
+                                  {complaintSortBy === '_id' && (
+                                    complaintSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleComplaintSortChange('clientName')}
+                                >
+                                  Client Name
+                                  {complaintSortBy === 'clientName' && (
+                                    complaintSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>Description</TableCell>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleComplaintSortChange('status')}
+                                >
+                                  Status
+                                  {complaintSortBy === 'status' && (
+                                    complaintSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleComplaintSortChange('submittedAt')}
+                                >
+                                  Submitted At
+                                  {complaintSortBy === 'submittedAt' && (
+                                    complaintSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>Assigned To</TableCell>
+                              <TableCell align="center">Actions</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {complaints.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={7} align="center">
+                                  <Typography variant="body1" sx={{ py: 2 }}>
+                                    No complaints found
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              complaints.map((complaint) => (
+                                <TableRow key={complaint.complaintId} hover>
+                                  <TableCell>
+                                    <Typography variant="body2" fontFamily="monospace">
+                                      {complaint.complaintId.substring(0, 8)}...
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell>{complaint.clientName}</TableCell>
+                                  <TableCell>
+                                    {complaint.description.length > 50 
+                                      ? `${complaint.description.substring(0, 50)}...` 
+                                      : complaint.description}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Chip 
+                                      label={complaint.status} 
+                                      color={
+                                        complaint.status === 'resolved' ? 'success' :
+                                        complaint.status === 'assigned' ? 'info' :
+                                        'warning'
+                                      }
+                                      size="small"
+                                    />
+                                  </TableCell>
+                                  <TableCell>{formatDate(complaint.submittedAt)}</TableCell>
+                                  <TableCell>
+                                    {complaint.assignedTo ? complaint.assignedTo.name : 'Unassigned'}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<Visibility />}
+                                      onClick={() => navigate(`/admin/complaints/${complaint.complaintId}`)}
+                                    >
+                                      View
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      
+                      {/* Pagination */}
+                      <TablePagination
+                        component="div"
+                        count={complaintPagination.totalCount}
+                        page={complaintPagination.currentPage - 1}
+                        onPageChange={handleComplaintPageChange}
+                        rowsPerPage={parseInt(complaintPagination.limit || 10)}
+                        onRowsPerPageChange={handleComplaintLimitChange}
+                        rowsPerPageOptions={[5, 10, 25, 50]}
+                        labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+                        sx={{ mt: 2 }}
+                      />
+                    </>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<CommentIcon />}
+                      onClick={() => navigate('/admin/complaints')}
+                    >
+                      View All Complaints
+                    </Button>
+                  </Box>
                 </Box>
               )}
             </>

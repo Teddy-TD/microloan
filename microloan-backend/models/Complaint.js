@@ -31,6 +31,15 @@ const ComplaintSchema = new mongoose.Schema({
   response: {
     type: String,
     default: ""
+  },
+  adminNotes: {
+    type: String,
+    default: ""
+  },
+  adminHandledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null
   }
 }, { timestamps: true });
 

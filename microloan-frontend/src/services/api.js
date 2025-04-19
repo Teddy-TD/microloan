@@ -1279,3 +1279,188 @@ export const getAdminApplicationDocument = async (applicationId, documentId) => 
     throw error;
   }
 };
+
+// Admin Complaint Management API Functions
+export const getAdminComplaints = async (params = {}) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.order) queryParams.append('order', params.order);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.clientId) queryParams.append('clientId', params.clientId);
+    if (params.search) queryParams.append('search', params.search);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    
+    const response = await fetch(`${BASE_URL}/api/complaints${queryString}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch complaints");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    throw error;
+  }
+};
+
+export const getAdminComplaintById = async (complaintId) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/${complaintId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch complaint details");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching complaint details:", error);
+    throw error;
+  }
+};
+
+export const updateAdminComplaintStatus = async (complaintId, data) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/${complaintId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update complaint status");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating complaint status:", error);
+    throw error;
+  }
+};
+
+export const assignComplaint = async (complaintId, assignedTo) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/${complaintId}/assign`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ assignedTo }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to assign complaint");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error assigning complaint:", error);
+    throw error;
+  }
+};
+
+export const resolveComplaint = async (complaintId, adminNotes) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/${complaintId}/resolve`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ adminNotes }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to resolve complaint");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error resolving complaint:", error);
+    throw error;
+  }
+};
+
+export const getLoanOfficers = async () => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/users?role=loan_officer`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch loan officers");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching loan officers:", error);
+    throw error;
+  }
+};
