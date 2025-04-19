@@ -30,7 +30,8 @@ import {
   Tooltip,
   Chip,
   TableContainer,
-  TablePagination
+  TablePagination,
+  InputAdornment
 } from "@mui/material";
 import { 
   getAllUsers, 
@@ -41,22 +42,36 @@ import {
   toggleUserActive,
   getAllLoans,
   getSystemStats,
-  updateClientProfile
+  updateClientProfile,
+  getAdminAllApplications,
+  getAdminPendingApplications
 } from "../services/api";
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import LockResetIcon from '@mui/icons-material/LockReset';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import BlockIcon from '@mui/icons-material/Block';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import SearchIcon from '@mui/icons-material/Search';
-import FilterListIcon from '@mui/icons-material/FilterList';
+import { 
+  PersonAdd, 
+  Edit, 
+  Delete, 
+  LockReset, 
+  AdminPanelSettings, 
+  Block, 
+  CheckCircle, 
+  Search, 
+  FilterList, 
+  Description, 
+  Refresh, 
+  Dashboard, 
+  Pending, 
+  Visibility, 
+  ArrowUpward, 
+  ArrowDownward
+} from '@mui/icons-material';
+import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loans, setLoans] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalLoans: 0,
@@ -69,6 +84,20 @@ const AdminDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  
+  // Loan Applications Tab States
+  const [appTabValue, setAppTabValue] = useState(0);
+  const [appSearchTerm, setAppSearchTerm] = useState("");
+  const [appLoading, setAppLoading] = useState(false);
+  const [appError, setAppError] = useState(null);
+  const [appPagination, setAppPagination] = useState({
+    currentPage: 1,
+    limit: 10,
+    totalCount: 0,
+    totalPages: 0
+  });
+  const [appSortBy, setAppSortBy] = useState('applicationDate');
+  const [appSortOrder, setAppSortOrder] = useState('desc');
   
   // Pagination
   const [page, setPage] = useState(0);
@@ -127,12 +156,18 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
+    applyFilters();
+  }, [users, searchTerm, roleFilter, statusFilter]);
+
+  useEffect(() => {
     fetchData();
   }, []);
 
   useEffect(() => {
-    applyFilters();
-  }, [users, searchTerm, roleFilter, statusFilter, applyFilters]);
+    if (tabValue === 2) {
+      fetchApplicationsByTab(appTabValue);
+    }
+  }, [tabValue]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -157,8 +192,261 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchApplicationsByTab = async (tabIndex) => {
+    setAppLoading(true);
+    try {
+      let response;
+      
+      if (tabIndex === 0) {
+        // All applications
+        response = await getAdminAllApplications({
+          page: 1,
+          limit: appPagination.limit,
+          sortBy: appSortBy,
+          order: appSortOrder,
+          search: appSearchTerm
+        });
+      } else if (tabIndex === 1) {
+        // Pending applications
+        response = await getAdminPendingApplications({
+          page: 1,
+          limit: appPagination.limit,
+          sortBy: appSortBy,
+          order: appSortOrder,
+          search: appSearchTerm
+        });
+      } else if (tabIndex === 2) {
+        // Approved applications
+        response = await getAdminAllApplications({
+          page: 1,
+          limit: appPagination.limit,
+          sortBy: appSortBy,
+          order: appSortOrder,
+          status: 'approved',
+          search: appSearchTerm
+        });
+      } else if (tabIndex === 3) {
+        // Rejected applications
+        response = await getAdminAllApplications({
+          page: 1,
+          limit: appPagination.limit,
+          sortBy: appSortBy,
+          order: appSortOrder,
+          status: 'rejected',
+          search: appSearchTerm
+        });
+      }
+      
+      if (response) {
+        setApplications(response.applications || []);
+        setAppPagination({
+          currentPage: response.pagination?.currentPage || 1,
+          limit: response.pagination?.limit || 10,
+          totalCount: response.pagination?.totalCount || 0,
+          totalPages: response.pagination?.totalPages || 0
+        });
+      }
+      setAppError(null);
+    } catch (err) {
+      console.error("Error fetching applications:", err);
+      setAppError("Failed to fetch applications. Please try again later.");
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+  
+  // Loan Applications Tab Handlers
+  const handleAppTabChange = (event, newValue) => {
+    setAppTabValue(newValue);
+    fetchApplicationsByTab(newValue);
+  };
+  
+  const handleAppPageChange = (event, newPage) => {
+    fetchApplicationsPage(newPage + 1);
+  };
+  
+  const fetchApplicationsPage = async (page) => {
+    setAppLoading(true);
+    try {
+      let status = '';
+      if (appTabValue === 1) status = 'pending';
+      else if (appTabValue === 2) status = 'approved';
+      else if (appTabValue === 3) status = 'rejected';
+      
+      const response = await getAdminAllApplications({
+        page,
+        limit: appPagination.limit,
+        sortBy: appSortBy,
+        order: appSortOrder,
+        status,
+        search: appSearchTerm
+      });
+      
+      setApplications(response.applications || []);
+      setAppPagination({
+        currentPage: response.pagination?.currentPage || 1,
+        limit: response.pagination?.limit || 10,
+        totalCount: response.pagination?.totalCount || 0,
+        totalPages: response.pagination?.totalPages || 0
+      });
+      setAppError(null);
+    } catch (err) {
+      console.error("Error fetching applications page:", err);
+      setAppError("Failed to fetch applications. Please try again later.");
+    } finally {
+      setAppLoading(false);
+    }
+  };
+  
+  const handleAppLimitChange = (event) => {
+    const newLimit = parseInt(event.target.value);
+    setAppPagination({
+      ...appPagination,
+      limit: newLimit
+    });
+    
+    fetchApplicationsWithLimit(newLimit);
+  };
+  
+  const fetchApplicationsWithLimit = async (limit) => {
+    setAppLoading(true);
+    try {
+      let status = '';
+      if (appTabValue === 1) status = 'pending';
+      else if (appTabValue === 2) status = 'approved';
+      else if (appTabValue === 3) status = 'rejected';
+      
+      const response = await getAdminAllApplications({
+        page: 1,
+        limit,
+        sortBy: appSortBy,
+        order: appSortOrder,
+        status,
+        search: appSearchTerm
+      });
+      
+      setApplications(response.applications || []);
+      setAppPagination({
+        currentPage: response.pagination?.currentPage || 1,
+        limit: response.pagination?.limit || 10,
+        totalCount: response.pagination?.totalCount || 0,
+        totalPages: response.pagination?.totalPages || 0
+      });
+      setAppError(null);
+    } catch (err) {
+      console.error("Error fetching applications with new limit:", err);
+      setAppError("Failed to fetch applications. Please try again later.");
+    } finally {
+      setAppLoading(false);
+    }
+  };
+  
+  const handleAppSearchChange = (event) => {
+    setAppSearchTerm(event.target.value);
+  };
+  
+  const handleAppSearch = () => {
+    fetchApplicationsSearch();
+  };
+  
+  const handleAppSearchKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleAppSearch();
+    }
+  };
+  
+  const fetchApplicationsSearch = async () => {
+    setAppLoading(true);
+    try {
+      let status = '';
+      if (appTabValue === 1) status = 'pending';
+      else if (appTabValue === 2) status = 'approved';
+      else if (appTabValue === 3) status = 'rejected';
+      
+      const response = await getAdminAllApplications({
+        page: 1,
+        limit: appPagination.limit,
+        sortBy: appSortBy,
+        order: appSortOrder,
+        status,
+        search: appSearchTerm
+      });
+      
+      setApplications(response.applications || []);
+      setAppPagination({
+        currentPage: response.pagination?.currentPage || 1,
+        limit: response.pagination?.limit || 10,
+        totalCount: response.pagination?.totalCount || 0,
+        totalPages: response.pagination?.totalPages || 0
+      });
+      setAppError(null);
+    } catch (err) {
+      console.error("Error searching applications:", err);
+      setAppError("Failed to search applications. Please try again later.");
+    } finally {
+      setAppLoading(false);
+    }
+  };
+  
+  const handleAppSortChange = (column) => {
+    const newOrder = appSortBy === column && appSortOrder === 'asc' ? 'desc' : 'asc';
+    setAppSortBy(column);
+    setAppSortOrder(newOrder);
+    
+    fetchApplicationsSort(column, newOrder);
+  };
+  
+  const fetchApplicationsSort = async (column, order) => {
+    setAppLoading(true);
+    try {
+      let status = '';
+      if (appTabValue === 1) status = 'pending';
+      else if (appTabValue === 2) status = 'approved';
+      else if (appTabValue === 3) status = 'rejected';
+      
+      const response = await getAdminAllApplications({
+        page: appPagination.currentPage,
+        limit: appPagination.limit,
+        sortBy: column,
+        order,
+        status,
+        search: appSearchTerm
+      });
+      
+      setApplications(response.applications || []);
+      setAppPagination({
+        currentPage: response.pagination?.currentPage || 1,
+        limit: response.pagination?.limit || 10,
+        totalCount: response.pagination?.totalCount || 0,
+        totalPages: response.pagination?.totalPages || 0
+      });
+      setAppError(null);
+    } catch (err) {
+      console.error("Error sorting applications:", err);
+      setAppError("Failed to sort applications. Please try again later.");
+    } finally {
+      setAppLoading(false);
+    }
+  };
+  
+  const handleAppRefresh = () => {
+    fetchApplicationsByTab(appTabValue);
+  };
+  
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+  
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString();
   };
 
   const handleChangePage = (event, newPage) => {
@@ -424,9 +712,23 @@ const AdminDashboard = () => {
                 <Grid item xs={12} sm={6} md={3}>
                   <Card sx={{ bgcolor: '#ffebee' }}>
                     <CardContent>
-                      <Typography variant="h6">Pending Loans</Typography>
+                      <Typography variant="h6">Loan Applications</Typography>
                       <Typography variant="h4">{stats.pendingLoans}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Pending applications requiring review
+                      </Typography>
                     </CardContent>
+                    <Box sx={{ p: 2, pt: 0 }}>
+                      <Button 
+                        variant="contained" 
+                        color="primary" 
+                        fullWidth
+                        startIcon={<Description />}
+                        onClick={() => navigate('/admin/applications')}
+                      >
+                        Manage Applications
+                      </Button>
+                    </Box>
                   </Card>
                 </Grid>
               </Grid>
@@ -435,6 +737,7 @@ const AdminDashboard = () => {
                 <Tabs value={tabValue} onChange={handleTabChange} aria-label="dashboard tabs">
                   <Tab label="User Management" />
                   <Tab label="Loan Overview" />
+                  <Tab label="Loan Applications" />
                 </Tabs>
               </Box>
 
@@ -446,7 +749,7 @@ const AdminDashboard = () => {
                     <Button 
                       variant="contained" 
                       color="primary" 
-                      startIcon={<PersonAddIcon />}
+                      startIcon={<PersonAdd />}
                       onClick={handleOpenAddDialog}
                     >
                       Add New User
@@ -465,7 +768,7 @@ const AdminDashboard = () => {
                           value={searchTerm}
                           onChange={handleSearchChange}
                           InputProps={{
-                            startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />
+                            startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />
                           }}
                         />
                       </Grid>
@@ -503,7 +806,7 @@ const AdminDashboard = () => {
                           fullWidth 
                           variant="outlined" 
                           onClick={clearFilters}
-                          startIcon={<FilterListIcon />}
+                          startIcon={<FilterList />}
                         >
                           Clear
                         </Button>
@@ -544,7 +847,7 @@ const AdminDashboard = () => {
                                     </TableCell>
                                     <TableCell>
                                       <Chip 
-                                        icon={user.active ? <CheckCircleIcon /> : <BlockIcon />}
+                                        icon={user.active ? <CheckCircle /> : <Block />}
                                         label={user.active ? "Active" : "Deactivated"} 
                                         color={user.active ? "success" : "default"} 
                                         size="small" 
@@ -559,7 +862,7 @@ const AdminDashboard = () => {
                                             color="primary"
                                             onClick={() => handleOpenEditDialog(user)}
                                           >
-                                            <EditIcon fontSize="small" />
+                                            <Edit fontSize="small" />
                                           </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Reset Password">
@@ -568,7 +871,7 @@ const AdminDashboard = () => {
                                             color="warning"
                                             onClick={() => handleOpenResetDialog(user)}
                                           >
-                                            <LockResetIcon fontSize="small" />
+                                            <LockReset fontSize="small" />
                                           </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Change Role">
@@ -577,7 +880,7 @@ const AdminDashboard = () => {
                                             color="info"
                                             onClick={() => handleOpenRoleDialog(user)}
                                           >
-                                            <AdminPanelSettingsIcon fontSize="small" />
+                                            <AdminPanelSettings fontSize="small" />
                                           </IconButton>
                                         </Tooltip>
                                         <Tooltip title={user.active ? "Deactivate Account" : "Activate Account"}>
@@ -586,7 +889,7 @@ const AdminDashboard = () => {
                                             color={user.active ? "default" : "success"}
                                             onClick={() => handleToggleActive(user)}
                                           >
-                                            {user.active ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
+                                            {user.active ? <Block fontSize="small" /> : <CheckCircle fontSize="small" />}
                                           </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Delete User">
@@ -595,7 +898,7 @@ const AdminDashboard = () => {
                                             color="error"
                                             onClick={() => handleOpenDeleteDialog(user)}
                                           >
-                                            <DeleteIcon fontSize="small" />
+                                            <Delete fontSize="small" />
                                           </IconButton>
                                         </Tooltip>
                                       </Box>
@@ -652,6 +955,228 @@ const AdminDashboard = () => {
                   )}
                 </Box>
               )}
+
+              {/* Loan Applications Tab */}
+              {tabValue === 2 && (
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, alignItems: 'center' }}>
+                    <Typography variant="h6">Loan Applications Management</Typography>
+                    <Button 
+                      variant="outlined" 
+                      startIcon={<Refresh />}
+                      onClick={handleAppRefresh}
+                      disabled={appLoading}
+                    >
+                      Refresh
+                    </Button>
+                  </Box>
+                  
+                  {appError && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                      {appError}
+                    </Alert>
+                  )}
+                  
+                  {/* Tabs */}
+                  <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                    <Tabs 
+                      value={appTabValue} 
+                      onChange={handleAppTabChange}
+                      indicatorColor="primary"
+                      textColor="primary"
+                      variant="fullWidth"
+                    >
+                      <Tab 
+                        icon={<Dashboard />} 
+                        label="All Applications" 
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon={<Pending />} 
+                        label="Pending" 
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon={<CheckCircle />} 
+                        label="Approved" 
+                        iconPosition="start"
+                      />
+                      <Tab 
+                        icon={<Block />} 
+                        label="Rejected" 
+                        iconPosition="start"
+                      />
+                    </Tabs>
+                  </Box>
+                  
+                  {/* Search Bar */}
+                  <Box sx={{ mb: 3 }}>
+                    <TextField
+                      fullWidth
+                      placeholder="Search by client name or purpose"
+                      variant="outlined"
+                      size="small"
+                      value={appSearchTerm}
+                      onChange={handleAppSearchChange}
+                      onKeyPress={handleAppSearchKeyPress}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search />
+                          </InputAdornment>
+                        ),
+                        endAdornment: (
+                          <InputAdornment position="end">
+                            <IconButton onClick={handleAppSearch} edge="end">
+                              <FilterList />
+                            </IconButton>
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Box>
+                  
+                  {/* Applications Table */}
+                  {appLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <>
+                      <TableContainer component={Paper} elevation={2}>
+                        <Table>
+                          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+                            <TableRow>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleAppSortChange('_id')}
+                                >
+                                  Application ID
+                                  {appSortBy === '_id' && (
+                                    appSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleAppSortChange('clientName')}
+                                >
+                                  Client Name
+                                  {appSortBy === 'clientName' && (
+                                    appSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleAppSortChange('loanAmount')}
+                                >
+                                  Loan Amount
+                                  {appSortBy === 'loanAmount' && (
+                                    appSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>Purpose</TableCell>
+                              <TableCell>
+                                <Box 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    cursor: 'pointer' 
+                                  }}
+                                  onClick={() => handleAppSortChange('applicationDate')}
+                                >
+                                  Application Date
+                                  {appSortBy === 'applicationDate' && (
+                                    appSortOrder === 'asc' ? <ArrowUpward fontSize="small" /> : <ArrowDownward fontSize="small" />
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell>Status</TableCell>
+                              <TableCell align="center">Actions</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {applications.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={7} align="center">
+                                  <Typography variant="body1" sx={{ py: 2 }}>
+                                    No loan applications found
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              applications.map((application) => (
+                                <TableRow key={application.applicationId} hover>
+                                  <TableCell>
+                                    <Typography variant="body2" fontFamily="monospace">
+                                      {application.applicationId.substring(0, 8)}...
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell>{application.clientName}</TableCell>
+                                  <TableCell>{formatCurrency(application.loanAmount)}</TableCell>
+                                  <TableCell>{application.purpose}</TableCell>
+                                  <TableCell>{formatDate(application.applicationDate)}</TableCell>
+                                  <TableCell>
+                                    <Chip 
+                                      label={application.status || 'pending'} 
+                                      size="small"
+                                      color={
+                                        application.status === 'approved' ? 'success' :
+                                        application.status === 'rejected' ? 'error' :
+                                        'warning'
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <Button
+                                      variant="outlined"
+                                      size="small"
+                                      startIcon={<Visibility />}
+                                      onClick={() => navigate(`/admin/applications/${application.applicationId}`)}
+                                    >
+                                      View
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                      
+                      {/* Pagination */}
+                      <TablePagination
+                        component="div"
+                        count={appPagination.totalCount}
+                        page={appPagination.currentPage - 1}
+                        onPageChange={handleAppPageChange}
+                        rowsPerPage={parseInt(appPagination.limit || 10)}
+                        onRowsPerPageChange={handleAppLimitChange}
+                        rowsPerPageOptions={[5, 10, 25, 50]}
+                        labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+                        sx={{ mt: 2 }}
+                      />
+                    </>
+                  )}
+                </Box>
+              )}
             </>
           )}
         </Paper>
@@ -670,6 +1195,7 @@ const AdminDashboard = () => {
                 type="text"
                 fullWidth
                 variant="outlined"
+                size="small"
                 value={addUserForm.name}
                 onChange={handleAddInputChange}
                 required
@@ -682,6 +1208,7 @@ const AdminDashboard = () => {
                 type="email"
                 fullWidth
                 variant="outlined"
+                size="small"
                 value={addUserForm.email}
                 onChange={handleAddInputChange}
                 required
@@ -694,6 +1221,7 @@ const AdminDashboard = () => {
                 type="password"
                 fullWidth
                 variant="outlined"
+                size="small"
                 value={addUserForm.password}
                 onChange={handleAddInputChange}
                 required
@@ -743,6 +1271,7 @@ const AdminDashboard = () => {
                 type="text"
                 fullWidth
                 variant="outlined"
+                size="small"
                 value={editUserForm.name}
                 onChange={handleEditInputChange}
                 required
@@ -755,6 +1284,7 @@ const AdminDashboard = () => {
                 type="email"
                 fullWidth
                 variant="outlined"
+                size="small"
                 value={editUserForm.email}
                 onChange={handleEditInputChange}
                 required

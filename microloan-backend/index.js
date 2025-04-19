@@ -11,6 +11,7 @@ const userRoutes = require("./routes/userRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
 const balanceRoutes = require("./routes/balanceRoutes");
 const loanOfficerRoutes = require("./routes/loanOfficerRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/balances", balanceRoutes);
 app.use("/api/loan-applications", loanOfficerRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "❌ Route not found" });

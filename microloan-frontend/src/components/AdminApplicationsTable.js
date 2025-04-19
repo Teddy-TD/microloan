@@ -28,7 +28,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 
-const LoanApplicationsTable = ({ 
+const AdminApplicationsTable = ({ 
   applications, 
   loading, 
   error, 
@@ -39,18 +39,13 @@ const LoanApplicationsTable = ({
   sortBy,
   sortOrder,
   onFilterChange,
-  filters,
-  userRole = 'loan_officer' // Default to loan officer if not specified
+  filters
 }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   
   const handleViewApplication = (applicationId) => {
-    if (userRole === 'admin') {
-      navigate(`/admin/applications/${applicationId}`);
-    } else {
-      navigate(`/loan-officer/applications/${applicationId}`);
-    }
+    navigate(`/admin/applications/${applicationId}`);
   };
 
   const handleSearchChange = (e) => {
@@ -167,10 +162,10 @@ const LoanApplicationsTable = ({
                     alignItems: 'center', 
                     cursor: 'pointer' 
                   }}
-                  onClick={() => handleSortClick('user.name')}
+                  onClick={() => handleSortClick('clientName')}
                 >
                   Client Name
-                  {renderSortIcon('user.name')}
+                  {renderSortIcon('clientName')}
                 </Box>
               </TableCell>
               <TableCell>
@@ -180,10 +175,10 @@ const LoanApplicationsTable = ({
                     alignItems: 'center', 
                     cursor: 'pointer' 
                   }}
-                  onClick={() => handleSortClick('amount')}
+                  onClick={() => handleSortClick('loanAmount')}
                 >
                   Loan Amount
-                  {renderSortIcon('amount')}
+                  {renderSortIcon('loanAmount')}
                 </Box>
               </TableCell>
               <TableCell>Purpose</TableCell>
@@ -227,7 +222,7 @@ const LoanApplicationsTable = ({
                   <TableCell>{formatDate(application.applicationDate)}</TableCell>
                   <TableCell>
                     <Chip 
-                      label={application.status} 
+                      label={application.status || 'pending'} 
                       size="small"
                       color={
                         application.status === 'approved' ? 'success' :
@@ -273,4 +268,4 @@ const LoanApplicationsTable = ({
   );
 };
 
-export default LoanApplicationsTable;
+export default AdminApplicationsTable;

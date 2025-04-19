@@ -1114,3 +1114,168 @@ export const updateClient = async (clientId, profileData) => {
     throw error;
   }
 };
+
+// Admin Loan Application Management API Functions
+export const getAdminPendingApplications = async (params = {}) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.order) queryParams.append('order', params.order);
+    if (params.search) queryParams.append('search', params.search);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    
+    const response = await fetch(`${BASE_URL}/api/admin/loan-applications/pending${queryString}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch pending applications");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching pending applications:", error);
+    throw error;
+  }
+};
+
+export const getAdminAllApplications = async (params = {}) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    // Build query string from params
+    const queryParams = new URLSearchParams();
+    
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.order) queryParams.append('order', params.order);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.search) queryParams.append('search', params.search);
+    
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    
+    const response = await fetch(`${BASE_URL}/api/admin/loan-applications${queryString}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch applications");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching applications:", error);
+    throw error;
+  }
+};
+
+export const getAdminApplicationById = async (applicationId) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/admin/loan-applications/${applicationId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch application details");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching application details:", error);
+    throw error;
+  }
+};
+
+export const processAdminApplication = async (applicationId, data) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/admin/loan-applications/${applicationId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to process application");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error processing application:", error);
+    throw error;
+  }
+};
+
+export const getAdminApplicationDocument = async (applicationId, documentId) => {
+  const token = localStorage.getItem("authToken");
+  
+  if (!token) {
+    throw new Error("No token found. Please log in.");
+  }
+  
+  try {
+    const response = await fetch(`${BASE_URL}/api/admin/loan-applications/${applicationId}/documents/${documentId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch document");
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching document:", error);
+    throw error;
+  }
+};
