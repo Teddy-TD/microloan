@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { AppBar, Toolbar, Typography } from "@mui/material";
 import PrivateRoute from "./components/PrivateRoute";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -25,6 +26,10 @@ import AdminApplications from "./pages/AdminApplications";
 import AdminApplicationDetailPage from "./pages/AdminApplicationDetailPage";
 import AdminComplaints from './pages/AdminComplaints';
 import AdminComplaintDetailPage from './pages/AdminComplaintDetailPage';
+import LoanOfficerComplaints from './pages/LoanOfficerComplaints';
+import LoanOfficerComplaintDetailPage from './pages/LoanOfficerComplaintDetailPage';
+import NotificationsPopover from "./components/NotificationsPopover";
+import NotificationsPage from "./pages/NotificationsPage";
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -45,6 +50,10 @@ const AnimatedRoutes = () => {
         variants={pageVariants}
       >
         <Routes location={location} key={location.pathname}>
+          {/* Notifications */}
+          <Route element={<PrivateRoute allowedRoles={["loan_officer", "admin", "client"]} />}>
+            <Route path="/notifications" element={<NotificationsPage />} />
+          </Route>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
@@ -71,6 +80,8 @@ const AnimatedRoutes = () => {
             <Route path="/loan-officer/applications/:applicationId" element={<LoanApplicationDetailPage />} />
             <Route path="/loan-officer/clients" element={<PrivateRoute allowedRoles={["loan_officer"]}><ClientsListPage /></PrivateRoute>} />
             <Route path="/loan-officer/clients/:clientId" element={<PrivateRoute allowedRoles={["loan_officer"]}><ClientProfilePage /></PrivateRoute>} />
+            <Route path="/loan-officer/complaints" element={<LoanOfficerComplaints />} />
+            <Route path="/loan-officer/complaints/:complaintId" element={<LoanOfficerComplaintDetailPage />} />
           </Route>
           <Route element={<PrivateRoute allowedRoles={["loan_officer"]} />}>
             <Route path="/loan-officer/profile" element={<LoanOfficerProfilePage />} />
@@ -93,6 +104,14 @@ const AnimatedRoutes = () => {
 function App() {
   return (
     <Router>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            Microloan
+          </Typography>
+          <NotificationsPopover />
+        </Toolbar>
+      </AppBar>
       <AnimatedRoutes />
     </Router>
   );

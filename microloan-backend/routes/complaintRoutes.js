@@ -4,6 +4,7 @@ const {
   getClientComplaints, 
   getComplaintById, 
   getAllComplaints, 
+  getAssignedComplaints,
   updateComplaintStatus,
   assignComplaint,
   resolveComplaint
@@ -22,6 +23,9 @@ router.post("/", authMiddleware, submitComplaint);
 
 // Get all complaints for the logged-in client
 router.get("/my-complaints", authMiddleware, getClientComplaints);
+
+// Get all complaints assigned to the loan officer
+router.get("/assigned", authMiddleware, loanOfficerMiddleware, getAssignedComplaints);
 
 // Get a specific complaint by ID
 router.get("/:complaintId", authMiddleware, getComplaintById);

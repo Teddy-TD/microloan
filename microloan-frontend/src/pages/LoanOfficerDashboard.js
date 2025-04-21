@@ -33,6 +33,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { getAllLoans, updateLoanStatus, getClientsList, updateClientProfile } from "../services/api";
+import LoanOfficerComplaints from './LoanOfficerComplaints';
 
 const LoanOfficerDashboard = () => {
   const navigate = useNavigate();
@@ -176,6 +177,7 @@ const LoanOfficerDashboard = () => {
                 <Tabs value={tabValue} onChange={handleTabChange} aria-label="dashboard tabs">
                   <Tab label="Loan Applications" />
                   <Tab label="Client Profiles" />
+                  <Tab label="Complaints" />
                 </Tabs>
               </Box>
 
@@ -348,6 +350,13 @@ const LoanOfficerDashboard = () => {
                       </TableBody>
                     </Table>
                   )}
+                </Box>
+              )}
+
+              {/* Complaints Tab */}
+              {tabValue === 2 && (
+                <Box sx={{ mt: 3 }}>
+                  <LoanOfficerComplaints />
                 </Box>
               )}
             </>

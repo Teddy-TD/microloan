@@ -63,7 +63,7 @@ const getClientComplaints = async (req, res) => {
 const getComplaintById = async (req, res) => {
   try {
     const { complaintId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.id.toString();
 
     if (!mongoose.Types.ObjectId.isValid(complaintId)) {
       return res.status(400).json({ message: "Invalid complaint ID" });
@@ -82,7 +82,7 @@ const getComplaintById = async (req, res) => {
     if (
       complaint.user._id.toString() !== userId &&
       req.user.role !== "admin" &&
-      req.user.role !== "loan_officer"
+      !(req.user.role === "loan_officer" && complaint.assignedTo && complaint.assignedTo._id.toString() === userId)
     ) {
       return res.status(403).json({ message: "Not authorized to view this complaint" });
     }
@@ -213,6 +213,53 @@ const getAllComplaints = async (req, res) => {
 };
 
 /**
+ * Get all assigned complaints (Loan Officer only)
+ * @route GET /api/complaints/assigned
+ * @access Private (Loan Officer only)
+ */
+const getAssignedComplaints = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, search, sortBy = 'submittedAt', order = 'desc' } = req.query;
+    const userId = req.user.id;
+    const skip = (page - 1) * limit;
+    const sortOrder = order === 'desc' ? -1 : 1;
+    const sortObj = { [sortBy]: sortOrder };
+    const filter = { assignedTo: userId };
+    if (status) filter.status = status;
+    if (search) filter.description = { $regex: search, $options: 'i' };
+    const complaints = await Complaint.find(filter)
+      .populate('user', 'name email phone')
+      .populate('adminHandledBy', 'name email')
+      .sort(sortObj)
+      .skip(skip)
+      .limit(parseInt(limit));
+    const totalCount = await Complaint.countDocuments(filter);
+    res.json({
+      complaints: complaints.map(c => ({
+        complaintId: c._id,
+        clientId: c.user._id,
+        clientName: c.user.name,
+        description: c.description,
+        status: c.status,
+        submittedAt: c.submittedAt,
+        resolvedAt: c.resolvedAt,
+        adminNotes: c.adminNotes,
+        officerNotes: c.officerNotes
+      })),
+      pagination: {
+        currentPage: parseInt(page),
+        limit: parseInt(limit),
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error fetching assigned complaints:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+/**
  * Update complaint status (Admin and Loan Officer only)
  * @route PATCH /api/complaints/:complaintId
  * @access Private (Admin, Loan Officer)
@@ -236,6 +283,11 @@ const updateComplaintStatus = async (req, res) => {
 
     if (!complaint) {
       return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    // If loan officer, ensure assignedTo matches
+    if (req.user.role === 'loan_officer' && complaint.assignedTo && complaint.assignedTo.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to update this complaint' });
     }
 
     // Update complaint fields if provided
@@ -322,44 +374,49 @@ const assignComplaint = async (req, res) => {
 };
 
 /**
- * Resolve a complaint (Admin only)
+ * Resolve a complaint (Admin or Loan Officer)
  * @route PATCH /api/complaints/:complaintId/resolve
- * @access Private (Admin only)
+ * @access Private (Admin, Loan Officer)
  */
 const resolveComplaint = async (req, res) => {
   try {
     const { complaintId } = req.params;
-    const { adminNotes } = req.body;
-    const adminId = req.user.id;
-    
+    const userId = req.user.id;
+    const { adminNotes, officerNotes } = req.body;
     if (!mongoose.Types.ObjectId.isValid(complaintId)) {
-      return res.status(400).json({ message: "Invalid complaint ID" });
+      return res.status(400).json({ message: 'Invalid complaint ID' });
     }
-    
     const complaint = await Complaint.findById(complaintId);
-    
     if (!complaint) {
-      return res.status(404).json({ message: "Complaint not found" });
+      return res.status(404).json({ message: 'Complaint not found' });
     }
-    
-    // Update complaint
-    complaint.status = "resolved";
-    complaint.resolvedAt = new Date();
-    complaint.adminHandledBy = adminId;
-    
-    if (adminNotes) {
-      complaint.adminNotes = adminNotes;
+    if (req.user.role === 'loan_officer') {
+      // Ensure assigned to this officer
+      if (!complaint.assignedTo || complaint.assignedTo.toString() !== userId) {
+        return res.status(403).json({ message: 'Not authorized to resolve this complaint' });
+      }
+      if (officerNotes && officerNotes.length < 2) {
+        return res.status(400).json({ message: 'officerNotes must be at least 2 characters' });
+      }
+      complaint.status = 'resolved';
+      complaint.resolvedAt = new Date();
+      complaint.officerNotes = officerNotes || '';
+    } else if (req.user.role === 'admin') {
+      complaint.status = 'resolved';
+      complaint.resolvedAt = new Date();
+      complaint.adminHandledBy = userId;
+      if (adminNotes) complaint.adminNotes = adminNotes;
+    } else {
+      return res.status(403).json({ message: 'Not authorized to resolve this complaint' });
     }
-    
     await complaint.save();
-    
     res.json({
-      message: "Complaint resolved successfully",
+      message: 'Complaint resolved successfully',
       complaint
     });
   } catch (error) {
-    console.error("❌ Error resolving complaint:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error('❌ Error resolving complaint:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
@@ -368,6 +425,7 @@ module.exports = {
   getClientComplaints,
   getComplaintById,
   getAllComplaints,
+  getAssignedComplaints,
   updateComplaintStatus,
   assignComplaint,
   resolveComplaint

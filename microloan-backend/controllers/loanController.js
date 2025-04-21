@@ -1,4 +1,7 @@
 const Loan = require("../models/Loan");
+const Notification = require('../models/Notification');
+const AuditLog = require('../models/AuditLog');
+const User = require('../models/User');
 const path = require("path");
 
 const applyForLoan = async (req, res) => {
@@ -33,11 +36,22 @@ const applyForLoan = async (req, res) => {
     });
     
     await loan.save();
+    // Notify loan officers and admins
+    const client = await User.findById(req.user.id);
+    const recipients = await User.find({ role: { $in: ['loan_officer', 'admin'] } });
+    const notifications = recipients.map(u => ({
+      user: u._id,
+      message: `New loan application #${loan._id} from ${client.name}`,
+      type: 'loan_application',
+      status: 'unread',
+      linkId: loan._id,
+      createdAt: new Date()
+    }));
+    await Notification.insertMany(notifications);
+    console.log(`✅ Notifications sent for loan ${loan._id} to ${recipients.length} users`);
+    await AuditLog.create({ user: req.user.id, action: 'notification_created', details: { type: 'loan_application', applicationId: loan._id } });
     
-    res.status(201).json({ 
-      message: "Loan application submitted successfully", 
-      loan 
-    });
+    res.status(201).json({ message: "Loan application submitted successfully", loan });
   } catch (error) {
     console.error("❌ Error applying for loan:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -95,6 +109,7 @@ const updateLoanStatus = async (req, res) => {
   try {
     const { loanId } = req.params;
     const { status } = req.body;
+    console.log(`[loanController] updateLoanStatus called by user ${req.user.id} for loan ${loanId}, requested status: ${status}`);
 
     // Validate status
     if (!["pending", "approved", "rejected"].includes(status)) {
@@ -107,6 +122,40 @@ const updateLoanStatus = async (req, res) => {
     loan.status = status;
     loan.updatedAt = new Date();
     await loan.save();
+    console.log(`[loanController] loan ${loanId} saved with status ${status}`);
+
+    // Notification on approval
+    if (status === 'approved') {
+      console.log(`[loanController] status is 'approved'; sending notification to client ${loan.user}`);
+      const clientUser = await User.findById(loan.user);
+      const officerUser = await User.findById(req.user.id);
+      const message = `Your loan application #${loan._id} for ${loan.amount} birr was approved by ${officerUser.name}`;
+      let newNotif;
+      try {
+        newNotif = await Notification.create({
+          user: clientUser._id,
+          message,
+          type: 'loan_status',
+          status: 'unread',
+          linkId: loan._id,
+          createdAt: new Date()
+        });
+        console.log(`[loanController] Notification created: id=${newNotif._id}, user=${newNotif.user}`);
+      } catch (err) {
+        console.error('[loanController] Error creating notification:', err);
+      }
+      try {
+        await AuditLog.create({
+          user: req.user.id,
+          action: 'notification_created',
+          details: { type: 'loan_status', loanId: loan._id, clientId: clientUser._id }
+        });
+        console.log(`[loanController] AuditLog created for loan ${loan._id}`);
+      } catch (err) {
+        console.error('[loanController] Error creating audit log:', err);
+      }
+      console.log(`✅ Approval notification sent for loan ${loan._id} to client ${clientUser._id}`);
+    }
 
     res.json({ message: "Loan status updated successfully", loan });
   } catch (error) {

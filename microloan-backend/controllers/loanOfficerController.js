@@ -1,6 +1,8 @@
 const Loan = require("../models/Loan");
 const User = require("../models/User");
 const mongoose = require("mongoose");
+const Notification = require("../models/Notification");
+const AuditLog = require("../models/AuditLog");
 
 /**
  * Get all pending loan applications
@@ -184,6 +186,35 @@ const processApplication = async (req, res) => {
     }
     
     await loanApplication.save();
+    console.log(`[loanOfficerController] loanApplication ${applicationId} saved with status ${status}`);
+    // Send notification on approval or rejection
+    if (["approved", "rejected"].includes(status)) {
+      try {
+        const clientUser = await User.findById(loanApplication.user);
+        const officerUser = await User.findById(req.user.id);
+        const message = status === 'approved'
+          ? `Your loan application #${loanApplication._id} for ${loanApplication.amount} birr was approved by ${officerUser.name}`
+          : `Your loan application #${loanApplication._id} was rejected by ${officerUser.name}`;
+        const newNotif = await Notification.create({
+          user: clientUser._id,
+          message,
+          type: 'loan_status',
+          status: 'unread',
+          linkId: loanApplication._id,
+          createdAt: new Date()
+        });
+        console.log(`[loanOfficerController] Notification created: id=${newNotif._id}, user=${newNotif.user}`);
+        await AuditLog.create({
+          user: req.user.id,
+          action: 'notification_created',
+          details: { type: 'loan_status', applicationId: loanApplication._id, clientId: clientUser._id }
+        });
+        console.log(`[loanOfficerController] AuditLog created for application ${loanApplication._id}`);
+        console.log(`✅ ${status.charAt(0).toUpperCase() + status.slice(1)} notification sent for application ${loanApplication._id} to client ${clientUser._id}`);
+      } catch (err) {
+        console.error('[loanOfficerController] Error creating notification or audit log:', err);
+      }
+    }
 
     res.status(200).json({
       message: `Loan application ${status === "approved" ? "approved" : "rejected"} successfully`,

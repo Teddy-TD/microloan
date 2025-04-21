@@ -1464,3 +1464,86 @@ export const getLoanOfficers = async () => {
     throw error;
   }
 };
+
+// Loan Officer Complaint Management API Functions
+export const getAssignedComplaints = async (params = {}) => {
+  const token = localStorage.getItem("authToken");
+  if (!token) throw new Error("No token found. Please log in.");
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page);
+    if (params.limit) queryParams.append('limit', params.limit);
+    if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+    if (params.order) queryParams.append('order', params.order);
+    if (params.status) queryParams.append('status', params.status);
+    if (params.search) queryParams.append('search', params.search);
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+    const response = await fetch(`${BASE_URL}/api/complaints/assigned${queryString}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to fetch assigned complaints");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching assigned complaints:", error);
+    throw error;
+  }
+};
+
+export const getAssignedComplaintById = async (complaintId) => {
+  return await getAdminComplaintById(complaintId);
+};
+
+export const resolveAssignedComplaint = async (complaintId, officerNotes) => {
+  const token = localStorage.getItem("authToken");
+  if (!token) throw new Error("No token found. Please log in.");
+  try {
+    const response = await fetch(`${BASE_URL}/api/complaints/${complaintId}/resolve`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ officerNotes }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to resolve complaint");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error resolving complaint:", error);
+    throw error;
+  }
+};
+
+// Notifications
+export const getUserNotifications = async ({ page = 1, limit = 10, status, type } = {}) => {
+  const token = localStorage.getItem("authToken");
+  let url = `${BASE_URL}/api/notifications?page=${page}&limit=${limit}`;
+  if (status) url += `&status=${status}`;
+  if (type) url += `&type=${type}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to fetch notifications");
+  return data;
+};
+
+export const markNotificationAsRead = async (notificationId) => {
+  const token = localStorage.getItem("authToken");
+  const res = await fetch(`${BASE_URL}/api/notifications/${notificationId}/read`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Failed to mark notification as read");
+  return data;
+};

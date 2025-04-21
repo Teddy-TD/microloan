@@ -40,6 +40,10 @@ const ComplaintSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     default: null
+  },
+  officerNotes: {
+    type: String,
+    default: ""
   }
 }, { timestamps: true });
 
