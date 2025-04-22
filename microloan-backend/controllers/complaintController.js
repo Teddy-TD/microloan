@@ -147,6 +147,7 @@ const getAllComplaints = async (req, res) => {
       filter.status = status;
     }
     
+    
     if (clientId) {
       filter.user = clientId;
     }
