@@ -13,9 +13,12 @@ import {
   Alert,
   Tabs,
   Tab,
-  Paper
+  Paper,
+  Card,
+  Grid,
+  TextField
 } from "@mui/material";
-import { getClientLoans } from "../services/api";
+import { getClientLoans, getUserProfile, getSavingsDetails } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import LoanApplicationForm from "../components/LoanApplicationForm";
 import LoanApplicationsList from "../components/LoanApplicationsList";
@@ -26,6 +29,17 @@ const ClientDashboard = () => {
   const [error, setError] = useState(null);
   const [tabValue, setTabValue] = useState(0);
   const navigate = useNavigate();
+  const [userProfile, setUserProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState(null);
+  const [savingsBalance, setSavingsBalance] = useState(0);
+  const [savingsLoading, setSavingsLoading] = useState(true);
+  const [savingsError, setSavingsError] = useState(null);
+  const [inputIncome, setInputIncome] = useState("");
+  const [inputSavings, setInputSavings] = useState("");
+  const [calcIncomeScore, setCalcIncomeScore] = useState(null);
+  const [calcSavingsScore, setCalcSavingsScore] = useState(null);
+  const [calcTotalScore, setCalcTotalScore] = useState(null);
 
   useEffect(() => {
     const fetchLoans = async () => {
@@ -50,8 +64,48 @@ const ClientDashboard = () => {
     fetchLoans();
   }, []);
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await getUserProfile();
+        setUserProfile(data);
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setProfileError("Failed to load profile.");
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const fetchSavings = async () => {
+      try {
+        const data = await getSavingsDetails();
+        setSavingsBalance(data.balance ?? 0);
+      } catch (err) {
+        console.error("Error fetching savings:", err);
+        setSavingsError("Failed to load savings.");
+      } finally {
+        setSavingsLoading(false);
+      }
+    };
+    fetchSavings();
+  }, []);
+
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleCalculate = () => {
+    const income = parseFloat(inputIncome) || 0;
+    const savings = parseFloat(inputSavings) || 0;
+    const incomeScore = Math.min(Math.floor(income / 100), 50);
+    const savingsScore = Math.min(Math.floor(savings / 100), 50);
+    setCalcIncomeScore(incomeScore);
+    setCalcSavingsScore(savingsScore);
+    setCalcTotalScore(incomeScore + savingsScore);
   };
 
   return (
@@ -70,6 +124,7 @@ const ClientDashboard = () => {
             <Tab label="Dashboard Overview" />
             <Tab label="Apply for Loan" />
             <Tab label="My Applications" />
+            <Tab label="Credit Score" />
           </Tabs>
 
           {/* Dashboard Overview Tab */}
@@ -114,6 +169,17 @@ const ClientDashboard = () => {
                 >
                   View Balances
                 </Button>
+                {profileLoading ? (
+                  <CircularProgress size={24} />
+                ) : profileError ? (
+                  <Typography variant="body2" color="error" sx={{ alignSelf: "center" }}>
+                    --
+                  </Typography>
+                ) : (
+                  <Button variant="contained" color="warning" sx={{ textTransform: "none" }}>
+                    Credit Score: {userProfile.creditScore}
+                  </Button>
+                )}
                 
                 <Button 
                   variant="contained"
@@ -218,6 +284,65 @@ const ClientDashboard = () => {
           {/* My Applications Tab */}
           {tabValue === 2 && (
             <LoanApplicationsList />
+          )}
+
+          {/* Credit Score Tab */}
+          {tabValue === 3 && (
+            <Box>
+              <Typography variant="h5" fontWeight="bold" color="primary" sx={{ mb: 3 }}>
+                Credit Score Calculator
+              </Typography>
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Monthly Income"
+                    variant="outlined"
+                    fullWidth
+                    value={inputIncome}
+                    onChange={(e) => setInputIncome(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Savings Balance"
+                    variant="outlined"
+                    fullWidth
+                    value={inputSavings}
+                    onChange={(e) => setInputSavings(e.target.value)}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button variant="contained" onClick={handleCalculate}>
+                    Calculate Credit Score
+                  </Button>
+                </Grid>
+              </Grid>
+              {calcTotalScore !== null && (
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={4} md={3}>
+                    <Card variant="outlined" sx={{ p: 2, textAlign: "center" }}>
+                      <Typography variant="subtitle2" color="textSecondary">Income Score</Typography>
+                      <CircularProgress variant="determinate" value={(calcIncomeScore/50)*100} size={60} thickness={4} sx={{ my: 1 }} />
+                      <Typography variant="h5">{calcIncomeScore}</Typography>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={4} md={3}>
+                    <Card variant="outlined" sx={{ p: 2, textAlign: "center" }}>
+                      <Typography variant="subtitle2" color="textSecondary">Savings Score</Typography>
+                      <CircularProgress variant="determinate" value={(calcSavingsScore/50)*100} size={60} thickness={4} sx={{ my: 1 }} />
+                      <Typography variant="h5">{calcSavingsScore}</Typography>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={4} md={3}>
+                    <Card variant="outlined" sx={{ p: 2, textAlign: "center" }}>
+                      <Typography variant="subtitle2" color="textSecondary">Total Score</Typography>
+                      <CircularProgress variant="determinate" value={calcTotalScore} size={80} thickness={4} sx={{ my: 1 }} />
+                      <Typography variant="h4">{calcTotalScore}</Typography>
+                    </Card>
+                  </Grid>
+                </Grid>
+              )}
+            </Box>
           )}
         </Paper>
       </Container>

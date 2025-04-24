@@ -2,7 +2,8 @@ const express = require("express");
 const { 
   getClientBalances, 
   getLoanDetails, 
-  getSavingsDetails 
+  getSavingsDetails,
+  updateSavingsDetails
 } = require("../controllers/balanceController");
 const { 
   authMiddleware 
@@ -18,5 +19,7 @@ router.get("/loans/:loanId", authMiddleware, getLoanDetails);
 
 // Get savings account details
 router.get("/savings", authMiddleware, getSavingsDetails);
+// Update savings account balance
+router.put("/savings", authMiddleware, updateSavingsDetails);
 
 module.exports = router;

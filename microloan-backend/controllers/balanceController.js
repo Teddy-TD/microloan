@@ -1,6 +1,10 @@
 const Loan = require("../models/Loan");
 const SavingsAccount = require("../models/SavingsAccount");
 const Transaction = require("../models/Transaction");
+const User = require("../models/User");
+const AuditLog = require("../models/AuditLog");
+const { calculateCreditScore } = require("../utils/creditScoreUtils");
+const axios = require("axios");
 
 /**
  * Get client balance information (loans and savings)
@@ -184,8 +188,90 @@ const getSavingsDetails = async (req, res) => {
   }
 };
 
+/**
+ * Update savings account balance
+ * @route PUT /api/balances/savings
+ * @access Private (Client only)
+ */
+const updateSavingsDetails = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { balance } = req.body;
+    
+    // Validate balance is not negative
+    if (balance < 0) {
+      return res.status(400).json({ message: 'Savings balance cannot be negative' });
+    }
+    
+    // Find or create savings account
+    let savingsAccount = await SavingsAccount.findOne({ user: userId });
+    if (!savingsAccount) {
+      savingsAccount = new SavingsAccount({ user: userId, balance: 0 });
+    }
+    
+    // Record previous balance for transaction history
+    const previousBalance = savingsAccount.balance;
+    const changeAmount = balance - previousBalance;
+    
+    // Update balance
+    savingsAccount.balance = balance;
+    
+    // Add transaction to history if there's a change
+    if (changeAmount !== 0) {
+      const transactionType = changeAmount > 0 ? 'deposit' : 'withdrawal';
+      savingsAccount.transactions.push({
+        amount: Math.abs(changeAmount),
+        type: transactionType,
+        date: new Date()
+      });
+    }
+    
+    await savingsAccount.save();
+    
+    // Update credit score after savings change
+    let updatedCreditScore = 0;
+    try {
+      // Get user for monthly income
+      const user = await User.findById(userId);
+      if (user) {
+        const monthlyIncome = user.incomeDetails?.monthlyIncome || 0;
+        
+        // Calculate new credit score
+        const creditScore = calculateCreditScore(monthlyIncome, balance);
+        updatedCreditScore = creditScore;
+        
+        // Update user's credit score
+        user.creditScore = creditScore;
+        user.lastCreditScoreUpdate = new Date();
+        await user.save();
+        
+        // Log the credit score update
+        await AuditLog.create({
+          user: userId,
+          action: "credit_score_updated",
+          details: { userId, creditScore, trigger: "savings_update" }
+        });
+      }
+    } catch (creditScoreError) {
+      console.error('❌ Error updating credit score:', creditScoreError);
+      // Continue with the response even if credit score update fails
+    }
+    
+    res.json({
+      id: savingsAccount._id,
+      balance: savingsAccount.balance,
+      transactions: savingsAccount.transactions,
+      creditScore: updatedCreditScore
+    });
+  } catch (error) {
+    console.error('❌ Error updating savings details:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 module.exports = {
   getClientBalances,
   getLoanDetails,
-  getSavingsDetails
+  getSavingsDetails,
+  updateSavingsDetails
 };

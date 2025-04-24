@@ -13,7 +13,8 @@ const {
   updatePassword,
   getAllClients,
   getClientById,
-  updateClientProfile
+  updateClientProfile,
+  updateCreditScore
 } = require("../controllers/userController");
 const { authMiddleware, adminMiddleware, loanOfficerMiddleware } = require("../middleware/authMiddleware");
 
@@ -30,6 +31,7 @@ router.put("/:userId/profile", authMiddleware, loanOfficerMiddleware, updateUser
 router.get("/clients", authMiddleware, loanOfficerMiddleware, getAllClients);
 router.get("/clients/:clientId", authMiddleware, loanOfficerMiddleware, getClientById);
 router.patch("/clients/:clientId", authMiddleware, loanOfficerMiddleware, updateClientProfile);
+router.patch("/clients/:clientId/credit-score", authMiddleware, loanOfficerMiddleware, updateCreditScore);
 
 // All authenticated users
 router.get("/profile", authMiddleware, getUserProfile);

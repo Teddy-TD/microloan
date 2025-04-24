@@ -1,8 +1,10 @@
 const Loan = require("../models/Loan");
 const User = require("../models/User");
+const SavingsAccount = require("../models/SavingsAccount");
 const mongoose = require("mongoose");
 const Notification = require("../models/Notification");
 const AuditLog = require("../models/AuditLog");
+const { calculateCreditScore, getCreditRating } = require("../utils/creditScoreUtils");
 
 /**
  * Get all pending loan applications
@@ -72,11 +74,18 @@ const getApplicationById = async (req, res) => {
     }
 
     const loan = await Loan.findById(applicationId)
-      .populate("user", "name email phone address");
+      .populate("user", "name email phone address creditScore lastCreditScoreUpdate incomeDetails");
     
     if (!loan) {
       return res.status(404).json({ message: "Loan application not found" });
     }
+    
+    // Get savings account information
+    const savingsAccount = await SavingsAccount.findOne({ user: loan.user._id });
+    const savingsBalance = savingsAccount ? savingsAccount.balance : 0;
+    
+    // Get credit rating based on score
+    const creditRating = getCreditRating(loan.user.creditScore || 0);
 
     // Format the response
     const formattedLoan = {
@@ -94,7 +103,13 @@ const getApplicationById = async (req, res) => {
       applicationDate: loan.applicationDate,
       reviewNotes: loan.reviewNotes,
       reviewedAt: loan.reviewedAt,
-      reviewedBy: loan.reviewedBy
+      reviewedBy: loan.reviewedBy,
+      // Credit score information
+      creditScore: loan.user.creditScore || 0,
+      creditRating: creditRating,
+      lastCreditScoreUpdate: loan.user.lastCreditScoreUpdate,
+      monthlyIncome: loan.user.incomeDetails?.monthlyIncome || 0,
+      savingsBalance: savingsBalance
     };
 
     res.status(200).json(formattedLoan);
@@ -124,15 +139,49 @@ const processApplication = async (req, res) => {
       return res.status(400).json({ message: "Invalid status. Must be 'approved' or 'rejected'" });
     }
 
-    // Find the loan application
-    const loanApplication = await Loan.findById(applicationId);
+    // Find the loan application with client details
+    const loanApplication = await Loan.findById(applicationId)
+      .populate("user", "name email phone creditScore lastCreditScoreUpdate incomeDetails");
     
     if (!loanApplication) {
       return res.status(404).json({ message: "Loan application not found" });
     }
     
+    // Check if the application has already been processed
     if (loanApplication.status !== "pending") {
-      return res.status(400).json({ message: "This application has already been processed" });
+      return res.status(400).json({ message: `Loan application has already been ${loanApplication.status}` });
+    }
+    
+    // Get savings account information
+    const savingsAccount = await SavingsAccount.findOne({ user: loanApplication.user._id });
+    const savingsBalance = savingsAccount ? savingsAccount.balance : 0;
+    
+    // Update credit score before processing application
+    try {
+      const monthlyIncome = loanApplication.user.incomeDetails?.monthlyIncome || 0;
+      const creditScore = calculateCreditScore(monthlyIncome, savingsBalance);
+      
+      // Update client's credit score
+      await User.findByIdAndUpdate(loanApplication.user._id, {
+        creditScore,
+        lastCreditScoreUpdate: new Date()
+      });
+      
+      // Log the credit score update
+      await AuditLog.create({
+        user: req.user.id,
+        action: "credit_score_updated",
+        details: { 
+          clientId: loanApplication.user._id, 
+          creditScore, 
+          trigger: "loan_application_processing" 
+        }
+      });
+      
+      console.log(`✅ Credit score updated for client ${loanApplication.user._id} to ${creditScore}`);
+    } catch (creditScoreError) {
+      console.error('❌ Error updating credit score:', creditScoreError);
+      // Continue processing the application even if credit score update fails
     }
 
     // Additional validation for approval
@@ -216,13 +265,23 @@ const processApplication = async (req, res) => {
       }
     }
 
+    // Get updated user information with credit score
+    const updatedUser = await User.findById(loanApplication.user._id);
+    const creditRating = getCreditRating(updatedUser.creditScore || 0);
+    
     res.status(200).json({
       message: `Loan application ${status === "approved" ? "approved" : "rejected"} successfully`,
       application: {
         applicationId: loanApplication._id,
         status: loanApplication.status,
         reviewedAt: loanApplication.reviewedAt,
-        reviewNotes: loanApplication.reviewNotes
+        reviewNotes: loanApplication.reviewNotes,
+        // Credit score information
+        creditScore: updatedUser.creditScore || 0,
+        creditRating: creditRating,
+        lastCreditScoreUpdate: updatedUser.lastCreditScoreUpdate,
+        monthlyIncome: updatedUser.incomeDetails?.monthlyIncome || 0,
+        savingsBalance: savingsBalance
       }
     });
   } catch (error) {

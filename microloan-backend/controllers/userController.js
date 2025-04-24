@@ -1,5 +1,9 @@
 const User = require("../models/User");
+const SavingsAccount = require("../models/SavingsAccount");
+const Notification = require("../models/Notification");
+const AuditLog = require("../models/AuditLog");
 const bcrypt = require("bcryptjs");
+const { calculateCreditScore, getCreditRating } = require("../utils/creditScoreUtils");
 
 // Get all users - Admin only
 const getAllUsers = async (req, res) => {
@@ -426,6 +430,65 @@ const updateClientProfile = async (req, res) => {
   }
 };
 
+// Update client credit score
+const updateCreditScore = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    
+    // Find the client
+    const client = await User.findById(clientId);
+    if (!client) {
+      return res.status(404).json({ message: "Client not found" });
+    }
+    
+    // Ensure the user is a client
+    if (client.role !== "client") {
+      return res.status(400).json({ message: "User is not a client" });
+    }
+    
+    // Get monthly income from client profile
+    const monthlyIncome = client.incomeDetails?.monthlyIncome || 0;
+    
+    // Get savings balance
+    const savingsAccount = await SavingsAccount.findOne({ user: clientId });
+    const savingsBalance = savingsAccount ? savingsAccount.balance : 0;
+    
+    // Calculate credit score
+    const creditScore = calculateCreditScore(monthlyIncome, savingsBalance);
+    const creditRating = getCreditRating(creditScore);
+    
+    // Update client with new credit score
+    client.creditScore = creditScore;
+    client.lastCreditScoreUpdate = new Date();
+    await client.save();
+    
+    // Create notification for the client
+    await Notification.create({
+      user: clientId,
+      message: `Your credit score has been updated to ${creditScore} (${creditRating}).`,
+      type: "credit_score"
+    });
+    
+    // Log in audit log
+    await AuditLog.create({
+      user: req.user.id,
+      action: "credit_score_updated",
+      details: { clientId, creditScore, previousScore: client.creditScore || 0 }
+    });
+    
+    res.json({
+      creditScore,
+      creditRating,
+      lastCreditScoreUpdate: client.lastCreditScoreUpdate,
+      monthlyIncome,
+      savingsBalance
+    });
+  } catch (error) {
+    console.error("❌ Update Credit Score Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = { 
   getAllUsers, 
   addUser, 
@@ -439,5 +502,6 @@ module.exports = {
   updatePassword,
   getAllClients,
   getClientById,
-  updateClientProfile
+  updateClientProfile,
+  updateCreditScore
 };

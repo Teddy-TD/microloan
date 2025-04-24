@@ -2,7 +2,9 @@ const Loan = require("../models/Loan");
 const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
 const User = require('../models/User');
+const SavingsAccount = require('../models/SavingsAccount');
 const path = require("path");
+const { calculateCreditScore, getCreditRating } = require("../utils/creditScoreUtils");
 
 const applyForLoan = async (req, res) => {
   try {
@@ -36,6 +38,7 @@ const applyForLoan = async (req, res) => {
     });
     
     await loan.save();
+    
     // Notify loan officers and admins
     const client = await User.findById(req.user.id);
     const recipients = await User.find({ role: { $in: ['loan_officer', 'admin'] } });
@@ -50,6 +53,40 @@ const applyForLoan = async (req, res) => {
     await Notification.insertMany(notifications);
     console.log(`✅ Notifications sent for loan ${loan._id} to ${recipients.length} users`);
     await AuditLog.create({ user: req.user.id, action: 'notification_created', details: { type: 'loan_application', applicationId: loan._id } });
+    
+    // Update credit score after loan application
+    try {
+      // Get savings balance
+      const savingsAccount = await SavingsAccount.findOne({ user: req.user.id });
+      const savingsBalance = savingsAccount ? savingsAccount.balance : 0;
+      
+      // Get monthly income from client profile
+      const monthlyIncome = client.incomeDetails?.monthlyIncome || 0;
+      
+      // Calculate credit score
+      const creditScore = calculateCreditScore(monthlyIncome, savingsBalance);
+      const creditRating = getCreditRating(creditScore);
+      
+      // Update client with new credit score
+      client.creditScore = creditScore;
+      client.lastCreditScoreUpdate = new Date();
+      await client.save();
+      
+      console.log(`✅ Credit score updated for client ${client._id} to ${creditScore} (${creditRating})`);
+      
+      // Log in audit log
+      await AuditLog.create({
+        user: req.user.id,
+        action: "credit_score_updated",
+        details: { clientId: client._id, creditScore, trigger: "loan_application" }
+      });
+      
+      // Include credit score in response
+      loan.creditScore = creditScore;
+    } catch (creditScoreError) {
+      console.error('❌ Error updating credit score:', creditScoreError);
+      // Continue with the response even if credit score update fails
+    }
     
     res.status(201).json({ message: "Loan application submitted successfully", loan });
   } catch (error) {
