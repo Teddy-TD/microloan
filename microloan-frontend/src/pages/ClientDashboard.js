@@ -22,6 +22,7 @@ import { getClientLoans, getUserProfile, getSavingsDetails } from "../services/a
 import { useNavigate } from "react-router-dom";
 import LoanApplicationForm from "../components/LoanApplicationForm";
 import LoanApplicationsList from "../components/LoanApplicationsList";
+import PaymentForm from "../components/PaymentForm";
 
 const ClientDashboard = () => {
   const [loans, setLoans] = useState([]);
@@ -125,6 +126,7 @@ const ClientDashboard = () => {
             <Tab label="Apply for Loan" />
             <Tab label="My Applications" />
             <Tab label="Credit Score" />
+            <Tab label="Make Payment via Chapa" />
           </Tabs>
 
           {/* Dashboard Overview Tab */}
@@ -343,6 +345,11 @@ const ClientDashboard = () => {
                 </Grid>
               )}
             </Box>
+          )}
+
+          {/* Make Payment via Chapa Tab */}
+          {tabValue === 4 && (
+            <PaymentForm />
           )}
         </Paper>
       </Container>
