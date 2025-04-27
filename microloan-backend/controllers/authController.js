@@ -47,5 +47,15 @@ const loginUser = async (req, res) => {
   }
 };
 
+// Logout user (stateless, client should clear token)
+const logoutUser = async (req, res) => {
+  try {
+    // Optionally handle token revocation here
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("❌ Logout Error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
-module.exports = { registerUser, loginUser };
+module.exports = { registerUser, loginUser, logoutUser };

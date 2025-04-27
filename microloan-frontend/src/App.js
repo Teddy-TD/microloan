@@ -30,6 +30,7 @@ import LoanOfficerComplaints from './pages/LoanOfficerComplaints';
 import LoanOfficerComplaintDetailPage from './pages/LoanOfficerComplaintDetailPage';
 import NotificationsPopover from "./components/NotificationsPopover";
 import NotificationsPage from "./pages/NotificationsPage";
+import LogoutButton from "./components/LogoutButton";
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -110,6 +111,7 @@ function App() {
             Microloan
           </Typography>
           <NotificationsPopover />
+          <LogoutButton />
         </Toolbar>
       </AppBar>
       <AnimatedRoutes />
