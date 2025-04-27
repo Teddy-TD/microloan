@@ -241,20 +241,20 @@ const ClientDashboard = () => {
                         </TableCell>
                         <TableCell>
                           {loan.status === "approved" && (
-                            <Button 
-                              variant="contained" 
-                              size="small" 
+                            <Button
+                              variant="contained"
+                              size="small"
                               sx={{ backgroundColor: "#FFD700", "&:hover": { backgroundColor: "#E5C100" } }}
-                              onClick={() => navigate(`/repay-loan/${loan._id}`)}
+                              onClick={() => setTabValue(4)}
                             >
                               Repay
                             </Button>
                           )}
-                          <Button 
-                            variant="outlined" 
+                          <Button
+                            variant="outlined"
                             size="small"
                             sx={{ ml: 1 }}
-                            onClick={() => navigate(`/loans/${loan._id}`)}
+                            onClick={() => setTabValue(2)}
                           >
                             Details
                           </Button>

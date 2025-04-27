@@ -71,7 +71,7 @@ const AnimatedRoutes = () => {
             <Route path="/repayment" element={<LoanRepaymentPage />} />
             <Route path="/complaints" element={<ComplaintsPage />} />
             <Route path="/balance" element={<BalancePage />} />
-            <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
           
           {/* Loan Officer Routes */}
